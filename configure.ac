@@ -88,6 +88,7 @@ AC_CONFIG_FILES([
 		Makefile
 		Common/Makefile
 		MIBFConstruct/Makefile
+		MIBFPair/Makefile
 ])
 AC_OUTPUT
 

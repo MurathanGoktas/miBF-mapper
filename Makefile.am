@@ -1,6 +1,7 @@
 SUBDIRS = \
 	Common \
-	MIBFConstruct
+	MIBFConstruct \
+	MIBFPair
 
 dist_doc_DATA = \
 	README.md
