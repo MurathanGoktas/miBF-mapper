@@ -14,14 +14,14 @@
 #include <string>
 #include <stdint.h>
 
-#include "../btl_bloomfilter/MIBloomFilter.hpp"
-#include "../btl_bloomfilter/MIBFConstructSupport.hpp"
-#include "../btl_bloomfilter/vendor/stHashIterator.hpp"
-#include "../Common/sntHashIterator.hpp"
+#include "btl_bloomfilter/MIBloomFilter.hpp"
+#include "btl_bloomfilter/MIBFConstructSupport.hpp"
+#include "btl_bloomfilter/vendor/stHashIterator.hpp"
+#include "Common/sntHashIterator.hpp"
 
-#include "../btl_bloomfilter/BloomFilter.hpp"
+#include "btl_bloomfilter/BloomFilter.hpp"
 
-#include "../Common/Options.h"
+#include "Common/Options.h"
 
 #include <tuple>
 #include <google/dense_hash_map>
@@ -46,7 +46,7 @@ public:
 			m_kmerSize(kmerSize), m_expectedEntries(numElements), m_fileNames(filenames) {
 		//Instantiate dense hash map
 		m_ids.push_back(""); //first entry is empty
-		m_start_pos.push_back(0);
+		// m_start_pos.push_back(0);
 		//dense hash maps take POD, and strings need to live somewhere
 		m_nameToID.set_empty_key(m_ids[0]);
 		size_t counts = 0;
@@ -106,6 +106,7 @@ public:
 						//m_start_pos[m_nameToID[m_ids.back()]] = prev_total_length;
 						m_start_pos.push_back(prev_total_length);
 						prev_total_length += seq->seq.l;
+						m_contig_length.push_back(seq->seq.l);
 					} else {
 						kseq_destroy(seq);
 						break;
@@ -305,6 +306,9 @@ public:
 			posFile << m_start_pos[o] << "\n";
 			assert(posFile);
 		}
+		//last element is end of last contig + 1 
+		posFile << m_start_pos.back() + m_contig_length.back() << "\n";
+		assert(posFile);
 		//---------------
 
 		cerr << "PopCount: " << miBF->getPop() << endl;
@@ -337,6 +341,7 @@ private:
 	vector<string> m_fileNames;
 	vector<string> m_ids;
 	vector<unsigned> m_start_pos;
+	vector<unsigned> m_contig_length;
 	//google::dense_hash_map<ID, unsigned> m_start_pos;
 	google::dense_hash_map<string, ID> m_nameToID;
 
