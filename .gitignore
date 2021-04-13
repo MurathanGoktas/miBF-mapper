@@ -38,15 +38,13 @@ Thumbs.db
 
 
 
-BioBloomCategorizer/.deps/
-BioBloomCategorizer/Makefile
-BioBloomCategorizer/Makefile.in
-BioBloomCategorizer/biobloomcategorizer
-BioBloomCategorizer/biobloommicategorizer
+MIBFPair/.deps/
+MIBFPair/Makefile
+MIBFPair/Makefile.in
+MIBFPair/biobloompair
 MIBFConstruct/.deps/
 MIBFConstruct/Makefile
 MIBFConstruct/Makefile.in
-MIBFConstruct/biobloommaker
 MIBFConstruct/biobloommimaker
 Common/.deps/
 Common/Makefile
