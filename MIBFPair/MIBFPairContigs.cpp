@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 	unsigned kmer_dist = d_arg * 1.2;
 	unsigned expected_total_edge_dist = d_arg * 0.2;
 
-	btllib::SeqReader reader(fasta_path, 8); // long flag
+	btllib::SeqReader reader(fasta_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
 		cur_kmer_loc = m_pos[processed_read_count];
 		ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
