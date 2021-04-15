@@ -61,11 +61,11 @@ int main(int argc, char** argv) {
 
 	/// report variables declared --------
 	unsigned processed_read_count = 0;
-	unsigned cur_hit = 0;
-	unsigned total_hit = 0;
-	unsigned unpresented_kmer = 0;
-	unsigned presented_kmer = 0;
-	unsigned total_unsaturated_rank = 0;
+	//unsigned cur_hit = 0;
+	//unsigned total_hit = 0;
+	//unsigned unpresented_kmer = 0;
+	//unsigned presented_kmer = 0;
+	//unsigned total_unsaturated_rank = 0;
 	/// report variables declared --------
 
 	/// read starting pos vector --------
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
 		}
 		++processed_read_count;
 		if(processed_read_count % 1000 == 0){
-			std::cout << "processed read: " << processed_read_count << std::endl;
+			std::cerr << "processed read: " << processed_read_count << std::endl;
 		}
 		if(processed_read_count > total_read ){
 			break;
@@ -204,10 +204,10 @@ int main(int argc, char** argv) {
 		}
 	}
 	
-	std::cout << "cur hit " << cur_hit << std::endl;
-	std::cout << "total hit " << total_hit << std::endl;
-	std::cout << "unpresented kmer " << unpresented_kmer << std::endl;	
-	std::cout << "presented kmer " << presented_kmer << std::endl;
-	std::cout << "total unsaturated query " << total_unsaturated_rank << std::endl;
+	//std::cout << "cur hit " << cur_hit << std::endl;
+	//std::cout << "total hit " << total_hit << std::endl;
+	//std::cout << "unpresented kmer " << unpresented_kmer << std::endl;	
+	//std::cout << "presented kmer " << presented_kmer << std::endl;
+	//std::cout << "total unsaturated query " << total_unsaturated_rank << std::endl;
 	return 0;
 }
