@@ -173,6 +173,8 @@ int main(int argc, char** argv) {
 	double min_hit_ratio =  0.75;
 	unsigned orient;
 	unsigned hit_index;
+	double cur_best_orient_ratio = 0;
+	unsigned min_hit_count = 50;
 
 	std::cout << "d param: " << d_arg << std::endl;
 	
@@ -180,9 +182,16 @@ int main(int argc, char** argv) {
 		hit_index = 0;
 		max_hit = 0;
 		orient = 10;
+		if(m_length[a] < expected_total_edge_dist * 4){
+			continue;
+		}
 		for(unsigned b = 0; b < hit_map.size(); b++){
+			if(m_length[b] < expected_total_edge_dist * 4){
+				continue;
+			}
 			for(unsigned c = 0; c < 8; c+=2){
-				if(hit_map[a][b][c] > max_hit && (hit_map[a][b][c])/(double)(hit_map[a][b][c] + hit_map[a][b][c+1]) > min_hit_ratio){
+				if(hit_map[a][b][c] > max_hit && hit_map[a][b][c] > min_hit_count && (hit_map[a][b][c])/(double)(hit_map[a][b][c] + hit_map[a][b][c+1]) > min_hit_ratio){
+					cur_best_orient_ratio = (hit_map[a][b][c])/(double)(hit_map[a][b][c] + hit_map[a][b][c+1]); 
 					orient = c;
 					max_hit = hit_map[a][b][c];
 					hit_index = b;			
@@ -190,7 +199,8 @@ int main(int argc, char** argv) {
 			}
 		}
 		if(hit_index != 0){
-			std::cout << a << "\t" << hit_index << "\t" << (orient / 2) << std::endl;
+			std::cout << a << "\t" << hit_index << "\t" << (orient / 2) << "\t" << max_hit << "\t" << cur_best_orient_ratio;
+			std::cout << "\t" << m_length[a] << "\t" << m_length[hit_index] << std::endl;
 		}
 	}
 	
