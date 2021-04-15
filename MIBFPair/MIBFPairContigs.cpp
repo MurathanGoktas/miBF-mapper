@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
 	
 	// declare data obejct
-	int contig_count;
+	unsigned contig_count;
 	vector<unsigned> m_pos;
 
 	/// report variables declared --------
@@ -82,9 +82,10 @@ int main(int argc, char** argv) {
 	/// creating contig length vector --------
 	//unsigned prev_pos = m_pos[0];
 	vector<unsigned> m_length;
-	m_length.push_back(m_pos[0]);
-	for(unsigned h = 1; h < m_pos.size(); h++){
-		m_length.push_back(m_pos[h] - m_length[h-1]);
+	// m_length.push_back(m_pos[1]);
+	for(unsigned h = 0; h < contig_count; h++){
+		m_length.push_back(m_pos[h+1] - m_pos[h]);
+		//std::cerr << h << "\t" << m_length.back() << std::endl;
 	}
 	/// creating contig length vector --------
 
@@ -176,7 +177,10 @@ int main(int argc, char** argv) {
 	double cur_best_orient_ratio = 0;
 	unsigned min_hit_count = 50;
 
-	std::cout << "d param: " << d_arg << std::endl;
+	std::cerr << "d param: " << d_arg << std::endl;
+	std::cerr << "min_hit_ratio: " << min_hit_ratio << std::endl;
+	std::cerr << "min_hit_count: " << min_hit_count << std::endl;
+	std::cerr << "d param: " << d_arg << std::endl;
 	
 	for(unsigned a = 0; a < hit_map.size(); a++){
 		hit_index = 0;
