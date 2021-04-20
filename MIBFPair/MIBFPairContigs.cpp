@@ -176,6 +176,8 @@ int main(int argc, char** argv) {
 	unsigned hit_index;
 	double cur_best_orient_ratio = 0;
 	unsigned min_hit_count = 50;
+	unsigned non_empty_cell = 0;
+	unsigned empty_cell = 0;
 
 	std::cerr << "d param: " << d_arg << std::endl;
 	std::cerr << "min_hit_ratio: " << min_hit_ratio << std::endl;
@@ -207,7 +209,19 @@ int main(int argc, char** argv) {
 			std::cout << "\t" << m_length[a] << "\t" << m_length[hit_index] << std::endl;
 		}
 	}
-	
+
+	for(unsigned a = 0; a < hit_map.size(); a++){
+		for(unsigned b = 0; b < hit_map.size(); b++){
+			if(hit_map[a][b][0] == 0 && hit_map[a][b][1] == 0){
+				empty_cell++;
+			}else{
+				non_empty_cell++;
+			}
+		}
+	}
+
+	std::cerr << "non_empty_cell " << non_empty_cell << std::endl;
+	std::cerr << "total cell: " << non_empty_cell + empty_cell << std::endl;
 	//std::cout << "cur hit " << cur_hit << std::endl;
 	//std::cout << "total hit " << total_hit << std::endl;
 	//std::cout << "unpresented kmer " << unpresented_kmer << std::endl;	
