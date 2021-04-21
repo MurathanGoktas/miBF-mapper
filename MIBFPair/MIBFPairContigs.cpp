@@ -7,7 +7,7 @@
 #include <Eigen/SparseCore>
 
 typedef uint32_t ID;
-typedef Eigen::SparseMatrix<double> SpMat;
+typedef Eigen::SparseMatrix<uint32_t> SpMat; // can be splitted into two matrices of 16 and 32 bits
 
 using namespace std;
 
@@ -41,6 +41,50 @@ unsigned getEdgeDistances(vector<unsigned> &m_pos, unsigned search_pos, unsigned
 	return contig_id;
 }
 
+//vector<unsigned> getEdgeDistances(vector<unsigned> &m_pos, vector<unsigned> search_pos, vector<unsigned> &start_dist, vector<unsigned> &end_dist){
+//	vector<unsigned> contigs;
+//	for (unsigned i = 0; i < search_pos.size(); i++)
+//	{
+//		contigs[i] = findContigBS(m_pos, 0, m_pos.size() - 1, search_pos[i]);
+//		start_dist[i] = search_pos - m_pos[contigs[i]];
+//		end_dist[i] = m_pos[contigs[i] + 1] - search_pos;
+//	}
+//	return contigs;
+//}
+
+unordered_map<ID,unsigned> filter(vector<ID> m_data_1, unsigned min_threshold){
+	//vector<ID> m_data_res(m_data_1.size());
+	vector<ID> seen(m_data_1.size());
+	unordered_map<ID,unsigned> res_map;
+	unsigned counter = 0;
+	//unsigned total_counter = 0;
+	for (unsigned i = 0; i < m_data_1.size(); i++)
+	{
+		std::vector<unsigned>::const_iterator it = std::find(seen.begin(), seen.end(), m_data_1[i]);
+		if(it != seen.end()){
+			continue;
+		}
+		for (unsigned k = i; k < m_data_1.size(); k++)
+		{
+			if(m_data_1[k] == m_data_1[i]){
+				++counter;
+			}
+		}
+		if(counter >= min_threshold){
+			res_map[m_data_1[i]] = counter;
+		}
+		seen.push_back(m_data_1[i]);
+		counter = 0;
+	}
+	return res_map;
+}
+
+void populate_hitmatrix(SpMat hit_matrix, unsigned c1, unsigned c2, unsigned start_dist_1, unsigned end_dist_1, unsigned start_dist_2, unsigned end_dist_2){
+	if(hit_matrix.isCompressed()){
+		int o = c1+  c2+  start_dist_1+  end_dist_1+  start_dist_2+ end_dist_2;;
+		++o;
+	}
+}
 int main(int argc, char** argv) {
 	// read arguments --------
 	if(argc != 5){
@@ -49,10 +93,14 @@ int main(int argc, char** argv) {
 	}
 	std::string mibf_path =  argv[1];
 	std::string fasta_path = argv[2];
-	unsigned total_read = stoi(argv[3]);
-	unsigned d_arg = stoi(argv[4]);
+	//unsigned total_read = stoi(argv[3]);
+	//unsigned d_arg = stoi(argv[4]);
 	// read arguments --------
-	unsigned error_margin = d_arg / 10;
+	//unsigned error_margin = d_arg / 10;
+
+	// declare distance categories
+	unsigned frag_distances[6] = {1000,2000,4000,8000,12000,20000}; // for test
+	unsigned distance_categories[6] = {0,10,500,1000,5000,10000}; // 0 for -1(perl links) for overlap
 
 	// create miBF
 	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
@@ -62,7 +110,7 @@ int main(int argc, char** argv) {
 	vector<unsigned> m_pos;
 
 	/// report variables declared --------
-	unsigned processed_read_count = 0;
+	//unsigned processed_read_count = 0;
 
 	/// read starting pos vector --------
 	std::ifstream file(std::string(argv[1]) + "_pos.txt");
@@ -85,8 +133,19 @@ int main(int argc, char** argv) {
 	vector<uint64_t> m_rank_pos_2(m_filter.get_hash_num());
 	vector<ID> m_data_1(m_filter.get_hash_num());
 	vector<ID> m_data_2(m_filter.get_hash_num());
-	int cur_kmer_loc;		// loc in total assembly
-	vector<vector<std::array<uint16_t, 8>>> hit_map(contig_count);
+	//vector<ID> m_cids_1(m_filter.get_hash_num());
+	//vector<ID> m_cids_2(m_filter.get_hash_num());
+	//vector<unsigned> start_dist_1(m_filter.get_hash_num());
+	//vector<unsigned> start_dist_2(m_filter.get_hash_num());
+	//vector<unsigned> end_dist_1(m_filter.get_hash_num());
+	//vector<unsigned> end_dist_2(m_filter.get_hash_num());
+	//vector<unsigned> m_cids_1(m_filter.get_hash_num());
+	//vector<unsigned> m_cids_2(m_filter.get_hash_num());	
+	unordered_map<ID,unsigned> m_map_1;
+	unordered_map<ID,unsigned> m_map_2;
+	//int cur_kmer_loc;		// loc in total assembly
+	//vector<vector<std::array<uint16_t, 8>>> hit_map(contig_count);
+	SpMat hit_matrix(contig_count,contig_count*4*sizeof(distance_categories)*2); //(ctCount,ctCount*orients*dist*{links,sumgap})
 	unsigned start_dist_1;
 	unsigned start_dist_2;
 	unsigned end_dist_1;
@@ -95,14 +154,64 @@ int main(int argc, char** argv) {
 	unsigned c_2;
 
 	/// init size of vectors --------
-	for(unsigned i = 0; i < hit_map.size(); i++){
-		hit_map[i].resize(contig_count);	
-	}
+	//for(unsigned i = 0; i < hit_map.size(); i++){
+	//	hit_map[i].resize(contig_count);	
+	//}
 	
-	unsigned kmer_dist = d_arg * 1.2;
-	unsigned expected_total_edge_dist = d_arg * 0.2;
+	//unsigned kmer_dist = d_arg * 1.2;
+	//unsigned expected_total_edge_dist = d_arg * 0.2;
 
-	btllib::SeqReader reader(fasta_path, 8, 1); // long flag
+	//------- new code
+	for(unsigned i = 0; i < sizeof(frag_distances); i++){
+		btllib::SeqReader reader(fasta_path, 8, 1);
+		for (btllib::SeqReader::Record record; (record = reader.read());) {
+			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
+			ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);	
+			while(itr2 != itr2.end()){
+				if(m_filter.at_rank(*itr1,m_rank_pos_1) && m_filter.at_rank(*itr2,m_rank_pos_2)){ // check both kmer exists
+					m_data_1 = m_filter.get_data(m_rank_pos_1); //get IDs
+					m_data_2 = m_filter.get_data(m_rank_pos_2);
+
+					m_map_1 = filter(m_data_1,2); // filter out IDs occuring less than 2
+					m_map_2 = filter(m_data_2,2);
+
+					// Get an iterator pointing to begining of map
+					unordered_map<ID, unsigned>::iterator it_1 = m_map_1.begin();
+					unordered_map<ID, unsigned>::iterator it_2 = m_map_2.begin();
+					// Iterate over the map using iterator
+					while (it_1 != m_map_1.end())
+					{
+						if(it_1->first > m_filter.MASK){	// if saturated, skip
+							++it_1;
+							continue;
+						}
+						c_1 = getEdgeDistances(m_pos,it_1->first,start_dist_1,end_dist_1);
+						while (it_2 != m_map_2.end()){
+							if(it_2->first > m_filter.MASK){ // if saturated skip
+								++it_2;
+								continue;
+							}
+							c_2 = getEdgeDistances(m_pos,it_2->first,start_dist_2,end_dist_2);
+
+							populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2);
+							
+							++it_2;
+						}
+						// std::cout << it->first << " :: " << it->second << std::endl;
+						++it_1;
+					}
+
+				}
+				
+				
+				++itr1;
+				++itr2;
+			}	
+	}
+	}
+
+	//------- new code
+/* 	btllib::SeqReader reader(fasta_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
 		cur_kmer_loc = m_pos[processed_read_count];
 		ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
@@ -210,6 +319,6 @@ int main(int argc, char** argv) {
 	}
 
 	std::cerr << "non_empty_cell " << non_empty_cell << std::endl;
-	std::cerr << "total cell: " << non_empty_cell + empty_cell << std::endl;
+	std::cerr << "total cell: " << non_empty_cell + empty_cell << std::endl; */
 	return 0;
 }
