@@ -4,8 +4,10 @@
 #include <vector>
 #include <iostream>
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
+#include <Eigen/SparseCore>
 
 typedef uint32_t ID;
+typedef Eigen::SparseMatrix<double> SpMat;
 
 using namespace std;
 
@@ -97,7 +99,7 @@ int main(int argc, char** argv) {
 	int cur_kmer_loc;		// loc in total assembly
 	//bool all_saturated;
 	//bool all_same;
-	vector<vector<std::array<unsigned, 8>>> hit_map(contig_count);
+	vector<vector<std::array<uint16_t, 8>>> hit_map(contig_count);
 	unsigned start_dist_1;
 	unsigned start_dist_2;
 	unsigned end_dist_1;
