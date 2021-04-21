@@ -6,6 +6,7 @@ Submodules:
 
 Dependent subdirectory:
   * Common
+  * eigen(sparsematrix)
 
 After cloning directly from the repository run:
 ```bash
