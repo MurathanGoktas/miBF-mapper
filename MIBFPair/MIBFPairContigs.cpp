@@ -63,31 +63,20 @@ int main(int argc, char** argv) {
 
 	/// report variables declared --------
 	unsigned processed_read_count = 0;
-	//unsigned cur_hit = 0;
-	//unsigned total_hit = 0;
-	//unsigned unpresented_kmer = 0;
-	//unsigned presented_kmer = 0;
-	//unsigned total_unsaturated_rank = 0;
-	/// report variables declared --------
 
 	/// read starting pos vector --------
 	std::ifstream file(std::string(argv[1]) + "_pos.txt");
 	std::string str;
 	while(std::getline(file,str)){
-		//m = std::stoi(str);
 		m_pos.push_back(std::stoi(str));
-		//std::cout << "m: " << m << std::endl;
 	}
 	contig_count = m_pos.size() - 1; // last elements is last index of last contig + 1, not starting pos of any contig
 	/// read string pos vector --------
 
 	/// creating contig length vector --------
-	//unsigned prev_pos = m_pos[0];
 	vector<unsigned> m_length;
-	// m_length.push_back(m_pos[1]);
 	for(unsigned h = 0; h < contig_count; h++){
 		m_length.push_back(m_pos[h+1] - m_pos[h]);
-		//std::cerr << h << "\t" << m_length.back() << std::endl;
 	}
 	/// creating contig length vector --------
 
@@ -97,8 +86,6 @@ int main(int argc, char** argv) {
 	vector<ID> m_data_1(m_filter.get_hash_num());
 	vector<ID> m_data_2(m_filter.get_hash_num());
 	int cur_kmer_loc;		// loc in total assembly
-	//bool all_saturated;
-	//bool all_same;
 	vector<vector<std::array<uint16_t, 8>>> hit_map(contig_count);
 	unsigned start_dist_1;
 	unsigned start_dist_2;
@@ -224,10 +211,5 @@ int main(int argc, char** argv) {
 
 	std::cerr << "non_empty_cell " << non_empty_cell << std::endl;
 	std::cerr << "total cell: " << non_empty_cell + empty_cell << std::endl;
-	//std::cout << "cur hit " << cur_hit << std::endl;
-	//std::cout << "total hit " << total_hit << std::endl;
-	//std::cout << "unpresented kmer " << unpresented_kmer << std::endl;	
-	//std::cout << "presented kmer " << presented_kmer << std::endl;
-	//std::cout << "total unsaturated query " << total_unsaturated_rank << std::endl;
 	return 0;
 }
