@@ -91,6 +91,11 @@ void populate_hitmatrix(SpMat &hit_matrix, unsigned c1, unsigned c2, unsigned st
 		++o;
 	}
 }
+
+//void getOrientation(unsigned &distance_enum,unsigned &orient_enum,unsigned &cur_frag_distance,unsigned &start_dist_1,unsigned &end_dist_1,unsigned &start_dist_2,unsigned &end_dist_2){
+
+//}
+
 int main(int argc, char** argv) {
 	// read arguments --------
 	if(argc != 5){
@@ -158,6 +163,9 @@ int main(int argc, char** argv) {
 	unsigned end_dist_2;
 	unsigned c_1 =0;
 	unsigned c_2=0;
+	//unsigned orient_enum; // 0,1,2,3,4
+	//unsigned distance_enum;
+	//unsigned cur_frag_distance;
 
 	/// init size of vectors --------
 	//for(unsigned i = 0; i < hit_map.size(); i++){
@@ -174,6 +182,7 @@ int main(int argc, char** argv) {
 	unsigned read_counter = 0;
 	//------- new code
 	for(unsigned i = 0; i < sizeof(frag_distances); i++){
+		//cur_frag_distance = frag_distances[i];
 		btllib::SeqReader reader(fasta_path, 8, 1);
 		for (btllib::SeqReader::Record record; (record = reader.read());) {
 			//std::cerr << "debug 1 " << std::endl;
@@ -212,11 +221,10 @@ int main(int argc, char** argv) {
 							}
 							//std::cerr << "debug 6 " << std::endl;
 							c_2 = getEdgeDistances(m_pos,it_2->first,start_dist_2,end_dist_2);
+							//getOrientation(distance_enum,orient_enum,cur_frag_distance,start_dist_1,end_dist_1,start_dist_2,end_dist_2);
 							++pair_found;
 							populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2); //veryslow thus commented
-							
-							// no need delete later
-							if(c_1==c_2){c_1=c_2;}
+
 							++it_2;
 						}
 						// std::cout << it->first << " :: " << it->second << std::endl;
