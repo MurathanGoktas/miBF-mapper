@@ -52,30 +52,36 @@ unsigned getEdgeDistances(vector<unsigned> &m_pos, unsigned search_pos, unsigned
 //	return contigs;
 //}
 
-unordered_map<ID,unsigned> filter(vector<ID> m_data_1, unsigned min_threshold){
+unordered_map<ID,unsigned> filter(unordered_map<ID,unsigned> &res_map, vector<ID> &m_data_1, unsigned min_threshold){
 	//vector<ID> m_data_res(m_data_1.size());
-	vector<ID> seen(m_data_1.size());
-	unordered_map<ID,unsigned> res_map;
-	unsigned counter = 0;
+	//static vector<ID> seen(m_data_1.size());
+	res_map.clear();
+	//unordered_map<ID,unsigned> res_map;
+	unsigned counter = 1;
+	//std::cerr << "m_data_1 size: " << m_data_1.size() << std::endl;
 	//unsigned total_counter = 0;
 	for (unsigned i = 0; i < m_data_1.size(); i++)
 	{
-		std::vector<unsigned>::const_iterator it = std::find(seen.begin(), seen.end(), m_data_1[i]);
-		if(it != seen.end()){
-			continue;
-		}
-		for (unsigned k = i; k < m_data_1.size(); k++)
+		//static std::vector<ID>::const_iterator it = std::find(seen.begin(), seen.end(), m_data_1[i]);
+		//if(it != seen.end()){
+		//	continue;
+		//}
+		for (unsigned k = i+1; k < m_data_1.size(); k++)
 		{
 			if(m_data_1[k] == m_data_1[i]){
 				++counter;
+				//std::cerr << "here!!" << std::endl;
 			}
 		}
-		if(counter >= min_threshold){
+		if(counter >= min_threshold && res_map.find(m_data_1[i]) == res_map.end()){
 			res_map[m_data_1[i]] = counter;
 		}
-		seen.push_back(m_data_1[i]);
-		counter = 0;
+		//std::cerr << "counter: " << counter << std::endl;
+		//seen.push_back(m_data_1[i]);
+		counter = 1;
 	}
+	//seen.clear();
+	//std::cerr << "map size: " << res_map.size() << std::endl;
 	return res_map;
 }
 
@@ -93,7 +99,7 @@ int main(int argc, char** argv) {
 	}
 	std::string mibf_path =  argv[1];
 	std::string fasta_path = argv[2];
-	//unsigned total_read = stoi(argv[3]);
+	unsigned total_read = stoi(argv[3]);
 	//unsigned d_arg = stoi(argv[4]);
 	// read arguments --------
 	//unsigned error_margin = d_arg / 10;
@@ -150,8 +156,8 @@ int main(int argc, char** argv) {
 	unsigned start_dist_2;
 	unsigned end_dist_1;
 	unsigned end_dist_2;
-	unsigned c_1;
-	unsigned c_2;
+	unsigned c_1 =0;
+	unsigned c_2=0;
 
 	/// init size of vectors --------
 	//for(unsigned i = 0; i < hit_map.size(); i++){
@@ -160,55 +166,78 @@ int main(int argc, char** argv) {
 	
 	//unsigned kmer_dist = d_arg * 1.2;
 	//unsigned expected_total_edge_dist = d_arg * 0.2;
+	unordered_map<ID, unsigned>::iterator it_1;
+	unordered_map<ID, unsigned>::iterator it_2;
 
+	unsigned pair_found = 0;
+
+	unsigned read_counter = 0;
 	//------- new code
 	for(unsigned i = 0; i < sizeof(frag_distances); i++){
 		btllib::SeqReader reader(fasta_path, 8, 1);
 		for (btllib::SeqReader::Record record; (record = reader.read());) {
+			//std::cerr << "debug 1 " << std::endl;
 			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
 			ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);	
 			while(itr2 != itr2.end()){
+				//std::cerr << "debug 2 " << std::endl;
 				if(m_filter.at_rank(*itr1,m_rank_pos_1) && m_filter.at_rank(*itr2,m_rank_pos_2)){ // check both kmer exists
+					//std::cerr << "debug 3 " << std::endl;
 					m_data_1 = m_filter.get_data(m_rank_pos_1); //get IDs
 					m_data_2 = m_filter.get_data(m_rank_pos_2);
 
-					m_map_1 = filter(m_data_1,2); // filter out IDs occuring less than 2
-					m_map_2 = filter(m_data_2,2);
+					filter(m_map_1,m_data_1,2); // filter out IDs occuring less than 2
+					filter(m_map_2,m_data_2,2);
+
+					//std::cerr << "m_map1 size: " << m_map_1.size() << std::endl;
+					//std::cerr << "m_map2 size: " << m_map_2.size() << std::endl;
 
 					// Get an iterator pointing to begining of map
-					unordered_map<ID, unsigned>::iterator it_1 = m_map_1.begin();
-					unordered_map<ID, unsigned>::iterator it_2 = m_map_2.begin();
+					it_1 = m_map_1.begin();
+					it_2 = m_map_2.begin();
 					// Iterate over the map using iterator
 					while (it_1 != m_map_1.end())
 					{
+						//std::cerr << "debug 4 " << std::endl;
 						if(it_1->first > m_filter.MASK){	// if saturated, skip
 							++it_1;
 							continue;
 						}
 						c_1 = getEdgeDistances(m_pos,it_1->first,start_dist_1,end_dist_1);
 						while (it_2 != m_map_2.end()){
-							if(it_2->first > m_filter.MASK){ // if saturated skip
+							//std::cerr << "debug 5 " << std::endl;
+							if(it_2->first > m_filter.MASK || it_1->first == it_2->first ){ // if saturated skip
 								++it_2;
 								continue;
 							}
+							//std::cerr << "debug 6 " << std::endl;
 							c_2 = getEdgeDistances(m_pos,it_2->first,start_dist_2,end_dist_2);
-
-							populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2);
+							++pair_found;
+							//populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2); //veryslow thus commented
 							
+							// no need delete later
+							if(c_1==c_2){c_1=c_2;}
 							++it_2;
 						}
 						// std::cout << it->first << " :: " << it->second << std::endl;
 						++it_1;
 					}
-
 				}
-				
-				
 				++itr1;
 				++itr2;
-			}	
+			}
+			//std::cerr << "read_counter " << read_counter << std::endl;
+			++read_counter;
+			if(read_counter % 1000 == 0){
+				std::cerr << "read_counter " << read_counter << std::endl;
+			}
+			if(read_counter > total_read){
+				break;
+			}
+		}
 	}
-	}
+
+	std::cerr << "pair found " << pair_found << std::endl;
 
 	//------- new code
 /* 	btllib::SeqReader reader(fasta_path, 8, 1); // long flag
