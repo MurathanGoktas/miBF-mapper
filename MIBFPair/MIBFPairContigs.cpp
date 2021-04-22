@@ -85,7 +85,7 @@ unordered_map<ID,unsigned> filter(unordered_map<ID,unsigned> &res_map, vector<ID
 	return res_map;
 }
 
-void populate_hitmatrix(SpMat hit_matrix, unsigned c1, unsigned c2, unsigned start_dist_1, unsigned end_dist_1, unsigned start_dist_2, unsigned end_dist_2){
+void populate_hitmatrix(SpMat &hit_matrix, unsigned c1, unsigned c2, unsigned start_dist_1, unsigned end_dist_1, unsigned start_dist_2, unsigned end_dist_2){
 	if(hit_matrix.isCompressed()){
 		int o = c1+  c2+  start_dist_1+  end_dist_1+  start_dist_2+ end_dist_2;;
 		++o;
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 							//std::cerr << "debug 6 " << std::endl;
 							c_2 = getEdgeDistances(m_pos,it_2->first,start_dist_2,end_dist_2);
 							++pair_found;
-							//populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2); //veryslow thus commented
+							populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2); //veryslow thus commented
 							
 							// no need delete later
 							if(c_1==c_2){c_1=c_2;}
