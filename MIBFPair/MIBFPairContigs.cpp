@@ -92,6 +92,29 @@ void populate_hitmatrix(SpMat &hit_matrix, unsigned c1, unsigned c2, unsigned st
 	}
 }
 
+/* void populate_hitmatp(vector<vector<std::array<uint16_t, 8>>> &hit_map, unsigned frag_dist, unsigned c1, unsigned c2, unsigned start_dist_1, unsigned end_dist_1, unsigned start_dist_2, unsigned end_dist_2){
+	unsigned expected_total_edge_dist = frag_dist + error_margin;
+	if(end_dist_1 + start_dist_2 < expected_total_edge_dist + error_margin && end_dist_1 + start_dist_2 > expected_total_edge_dist - error_margin){
+		c_1 < c_2 ? ++hit_map[c_1][c_2][0] : ++hit_map[c_2][c_1][2];
+	}else{
+		c_1 < c_2 ? ++hit_map[c_1][c_2][1] : ++hit_map[c_2][c_1][3];
+	}
+	if(start_dist_1 + end_dist_2 < expected_total_edge_dist + error_margin && start_dist_1 + end_dist_2 > expected_total_edge_dist - error_margin){
+		c_1 < c_2 ? ++hit_map[c_1][c_2][2] : ++hit_map[c_2][c_1][0];
+	}else{
+		c_1 < c_2 ? ++hit_map[c_1][c_2][3] : ++hit_map[c_2][c_1][1];
+	}
+	if(start_dist_1 + start_dist_2 < expected_total_edge_dist + error_margin && start_dist_1 + start_dist_2 > expected_total_edge_dist - error_margin){
+		c_1 < c_2 ? ++hit_map[c_1][c_2][4] : ++hit_map[c_2][c_1][6];
+	}else{
+		c_1 < c_2 ? ++hit_map[c_1][c_2][5] : ++hit_map[c_2][c_1][7];
+	}
+	if(end_dist_1 + end_dist_2 < expected_total_edge_dist + error_margin && end_dist_1 + end_dist_2 > expected_total_edge_dist - error_margin){
+		c_1 < c_2 ? ++hit_map[c_1][c_2][6] : ++hit_map[c_2][c_1][4];
+	}else{
+		c_1 < c_2 ? ++hit_map[c_1][c_2][7] : ++hit_map[c_2][c_1][5];
+	}
+} */
 //void getOrientation(unsigned &distance_enum,unsigned &orient_enum,unsigned &cur_frag_distance,unsigned &start_dist_1,unsigned &end_dist_1,unsigned &start_dist_2,unsigned &end_dist_2){
 
 //}
@@ -155,7 +178,13 @@ int main(int argc, char** argv) {
 	unordered_map<ID,unsigned> m_map_1;
 	unordered_map<ID,unsigned> m_map_2;
 	//int cur_kmer_loc;		// loc in total assembly
-	//vector<vector<std::array<uint16_t, 8>>> hit_map(contig_count);
+	//vector <vector <vector <vector<array<uint16_t, 2>>>>> hit_map(contig_count);
+	//vector<vector<unsigned>> hit_map(contig_count);
+	//unsigned hit_map[contig_count][contig_count];
+	unsigned** hit_map = new unsigned*[contig_count];
+	for(unsigned i = 0; i < contig_count; ++i){
+		hit_map[i] = new unsigned[contig_count];
+	}
 	SpMat hit_matrix(contig_count,contig_count*4*sizeof(distance_categories)*2); //(ctCount,ctCount*orients*dist*{links,sumgap})
 	unsigned start_dist_1;
 	unsigned start_dist_2;
@@ -178,16 +207,21 @@ int main(int argc, char** argv) {
 	unordered_map<ID, unsigned>::iterator it_2;
 
 	unsigned pair_found = 0;
+	std::cerr << "debug xx " << std::endl;
+
+	std::cerr << "sizeof(frag_distances) " << sizeof(frag_distances) << std::endl;
+	std::cerr << "frag_distances[1] " << frag_distances[1] << std::endl;
 
 	unsigned read_counter = 0;
 	//------- new code
-	for(unsigned i = 0; i < sizeof(frag_distances); i++){
+	for(unsigned i = 0; i < sizeof(frag_distances)/sizeof(frag_distances[0]); i++){
 		//cur_frag_distance = frag_distances[i];
+		std::cerr << "cur frag dist " << frag_distances[i] << std::endl;
 		btllib::SeqReader reader(fasta_path, 8, 1);
 		for (btllib::SeqReader::Record record; (record = reader.read());) {
 			//std::cerr << "debug 1 " << std::endl;
 			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
-			ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);	
+			ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);
 			while(itr2 != itr2.end()){
 				//std::cerr << "debug 2 " << std::endl;
 				if(m_filter.at_rank(*itr1,m_rank_pos_1) && m_filter.at_rank(*itr2,m_rank_pos_2)){ // check both kmer exists
@@ -222,7 +256,12 @@ int main(int argc, char** argv) {
 							//std::cerr << "debug 6 " << std::endl;
 							c_2 = getEdgeDistances(m_pos,it_2->first,start_dist_2,end_dist_2);
 							//getOrientation(distance_enum,orient_enum,cur_frag_distance,start_dist_1,end_dist_1,start_dist_2,end_dist_2);
+							if(c_1 != c_2){
+								c_1 < c_2 ? hit_map[c_1][c_2]++ : hit_map[c_2][c_1]++;
+							}
+							//std::cerr << "debug 7 " << std::endl;
 							++pair_found;
+							//populate_hitmap(hit_map,cur_frag_distance,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2);
 							populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2); //veryslow thus commented
 
 							++it_2;
@@ -240,8 +279,41 @@ int main(int argc, char** argv) {
 				std::cerr << "read_counter " << read_counter << std::endl;
 			}
 			if(read_counter > total_read){
+				read_counter = 0;
 				break;
 			}
+		}
+	}
+
+	unsigned max_hit;
+	//double min_hit_ratio =  0.75;
+	//unsigned orient;
+	unsigned hit_index;
+	//double cur_best_orient_ratio = 0;
+	unsigned min_hit_count = 50;
+	//unsigned non_empty_cell = 0;
+	//unsigned empty_cell = 0;
+
+	//std::cerr << "d param: " << d_arg << std::endl;
+	//std::cerr << "min_hit_ratio: " << min_hit_ratio << std::endl;
+	std::cerr << "min_hit_count: " << min_hit_count << std::endl;
+	//std::cerr << "d param: " << d_arg << std::endl;
+	
+	for(unsigned a = 0; a < contig_count; a++){
+		hit_index = 0;
+		max_hit = 0;
+		//orient = 10;
+		for(unsigned b = 0; b < contig_count; b++){
+			if(hit_map[a][b] > max_hit && hit_map[a][b] > min_hit_count){
+				//cur_best_orient_ratio = (hit_map[a][b][c])/(double)(hit_map[a][b][c] + hit_map[a][b][c+1]); 
+				//orient = c;
+				max_hit = hit_map[a][b];
+				hit_index = b;			
+			}
+			
+		}
+		if(hit_index != 0){
+			std::cout << a << "\t" << hit_index << "\t" << max_hit << "\t" << std::endl;
 		}
 	}
 
