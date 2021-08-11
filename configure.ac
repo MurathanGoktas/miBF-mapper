@@ -34,18 +34,18 @@ if test "$with_boost" -a -d "$with_boost"; then
 	boost_cppflags="-isystem$with_boost"
 fi
 
-AC_ARG_WITH(sparsehash, AS_HELP_STRING([--with-sparsehash=PATH],
-			[specify directory for the google sparsehash header files]))
-if test "$with_sparsehash" -a -d "$with_sparsehash"; then
-	sparsehash_cppflags="-isystem$with_sparsehash"
-fi
+#AC_ARG_WITH(sparsehash, AS_HELP_STRING([--with-sparsehash=PATH],
+#			[specify directory for the google sparsehash header files]))
+#if test "$with_sparsehash" -a -d "$with_sparsehash"; then
+#	sparsehash_cppflags="-isystem$with_sparsehash"
+#fi
 
-AC_ARG_WITH(sdsl, AS_HELP_STRING([--with-sdsl=PATH],
-			[specify directory for the sdsl header files]))
-if test "$with_sdsl" -a -d "$with_sdsl"; then
-	sdsl_cppflags="-isystem$with_sdsl/include"
-	sdsl_ldflags="-L$with_sdsl/lib"
-fi
+#AC_ARG_WITH(sdsl, AS_HELP_STRING([--with-sdsl=PATH],
+#			[specify directory for the sdsl header files]))
+#if test "$with_sdsl" -a -d "$with_sdsl"; then
+#	sdsl_cppflags="-isystem$with_sdsl/include"
+#	sdsl_ldflags="-L$with_sdsl/lib"
+#fi
 
 # Find the absolute paths.
 srcdir=$(cd $srcdir; pwd)

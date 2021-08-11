@@ -4,10 +4,10 @@
 #include <vector>
 #include <iostream>
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
-#include <Eigen/SparseCore>
+//#include <Eigen/SparseCore>
 
 typedef uint32_t ID;
-typedef Eigen::SparseMatrix<uint32_t> SpMat; // can be splitted into two matrices of 16 and 32 bits
+//typedef Eigen::SparseMatrix<uint32_t> SpMat; // can be splitted into two matrices of 16 and 32 bits
 
 using namespace std;
 
@@ -41,17 +41,6 @@ unsigned getEdgeDistances(vector<unsigned> &m_pos, unsigned search_pos, unsigned
 	return contig_id;
 }
 
-//vector<unsigned> getEdgeDistances(vector<unsigned> &m_pos, vector<unsigned> search_pos, vector<unsigned> &start_dist, vector<unsigned> &end_dist){
-//	vector<unsigned> contigs;
-//	for (unsigned i = 0; i < search_pos.size(); i++)
-//	{
-//		contigs[i] = findContigBS(m_pos, 0, m_pos.size() - 1, search_pos[i]);
-//		start_dist[i] = search_pos - m_pos[contigs[i]];
-//		end_dist[i] = m_pos[contigs[i] + 1] - search_pos;
-//	}
-//	return contigs;
-//}
-
 unordered_map<ID,unsigned> filter(unordered_map<ID,unsigned> &res_map, vector<ID> &m_data_1, unsigned min_threshold){
 	//vector<ID> m_data_res(m_data_1.size());
 	//static vector<ID> seen(m_data_1.size());
@@ -62,10 +51,7 @@ unordered_map<ID,unsigned> filter(unordered_map<ID,unsigned> &res_map, vector<ID
 	//unsigned total_counter = 0;
 	for (unsigned i = 0; i < m_data_1.size(); i++)
 	{
-		//static std::vector<ID>::const_iterator it = std::find(seen.begin(), seen.end(), m_data_1[i]);
-		//if(it != seen.end()){
-		//	continue;
-		//}
+
 		for (unsigned k = i+1; k < m_data_1.size(); k++)
 		{
 			if(m_data_1[k] == m_data_1[i]){
@@ -92,33 +78,6 @@ void populate_hitmatrix(SpMat &hit_matrix, unsigned c1, unsigned c2, unsigned st
 	}
 }
 
-/* void populate_hitmatp(vector<vector<std::array<uint16_t, 8>>> &hit_map, unsigned frag_dist, unsigned c1, unsigned c2, unsigned start_dist_1, unsigned end_dist_1, unsigned start_dist_2, unsigned end_dist_2){
-	unsigned expected_total_edge_dist = frag_dist + error_margin;
-	if(end_dist_1 + start_dist_2 < expected_total_edge_dist + error_margin && end_dist_1 + start_dist_2 > expected_total_edge_dist - error_margin){
-		c_1 < c_2 ? ++hit_map[c_1][c_2][0] : ++hit_map[c_2][c_1][2];
-	}else{
-		c_1 < c_2 ? ++hit_map[c_1][c_2][1] : ++hit_map[c_2][c_1][3];
-	}
-	if(start_dist_1 + end_dist_2 < expected_total_edge_dist + error_margin && start_dist_1 + end_dist_2 > expected_total_edge_dist - error_margin){
-		c_1 < c_2 ? ++hit_map[c_1][c_2][2] : ++hit_map[c_2][c_1][0];
-	}else{
-		c_1 < c_2 ? ++hit_map[c_1][c_2][3] : ++hit_map[c_2][c_1][1];
-	}
-	if(start_dist_1 + start_dist_2 < expected_total_edge_dist + error_margin && start_dist_1 + start_dist_2 > expected_total_edge_dist - error_margin){
-		c_1 < c_2 ? ++hit_map[c_1][c_2][4] : ++hit_map[c_2][c_1][6];
-	}else{
-		c_1 < c_2 ? ++hit_map[c_1][c_2][5] : ++hit_map[c_2][c_1][7];
-	}
-	if(end_dist_1 + end_dist_2 < expected_total_edge_dist + error_margin && end_dist_1 + end_dist_2 > expected_total_edge_dist - error_margin){
-		c_1 < c_2 ? ++hit_map[c_1][c_2][6] : ++hit_map[c_2][c_1][4];
-	}else{
-		c_1 < c_2 ? ++hit_map[c_1][c_2][7] : ++hit_map[c_2][c_1][5];
-	}
-} */
-//void getOrientation(unsigned &distance_enum,unsigned &orient_enum,unsigned &cur_frag_distance,unsigned &start_dist_1,unsigned &end_dist_1,unsigned &start_dist_2,unsigned &end_dist_2){
-
-//}
-
 int main(int argc, char** argv) {
 	// read arguments --------
 	if(argc != 5){
@@ -128,9 +87,6 @@ int main(int argc, char** argv) {
 	std::string mibf_path =  argv[1];
 	std::string fasta_path = argv[2];
 	unsigned total_read = stoi(argv[3]);
-	//unsigned d_arg = stoi(argv[4]);
-	// read arguments --------
-	//unsigned error_margin = d_arg / 10;
 
 	// declare distance categories
 	unsigned frag_distances[6] = {1000,2000,4000,8000,12000,20000}; // for test
@@ -142,9 +98,6 @@ int main(int argc, char** argv) {
 	// declare data obejct
 	unsigned contig_count;
 	vector<unsigned> m_pos;
-
-	/// report variables declared --------
-	//unsigned processed_read_count = 0;
 
 	/// read starting pos vector --------
 	std::ifstream file(std::string(argv[1]) + "_pos.txt");
@@ -167,20 +120,10 @@ int main(int argc, char** argv) {
 	vector<uint64_t> m_rank_pos_2(m_filter.get_hash_num());
 	vector<ID> m_data_1(m_filter.get_hash_num());
 	vector<ID> m_data_2(m_filter.get_hash_num());
-	//vector<ID> m_cids_1(m_filter.get_hash_num());
-	//vector<ID> m_cids_2(m_filter.get_hash_num());
-	//vector<unsigned> start_dist_1(m_filter.get_hash_num());
-	//vector<unsigned> start_dist_2(m_filter.get_hash_num());
-	//vector<unsigned> end_dist_1(m_filter.get_hash_num());
-	//vector<unsigned> end_dist_2(m_filter.get_hash_num());
-	//vector<unsigned> m_cids_1(m_filter.get_hash_num());
-	//vector<unsigned> m_cids_2(m_filter.get_hash_num());	
+
 	unordered_map<ID,unsigned> m_map_1;
 	unordered_map<ID,unsigned> m_map_2;
-	//int cur_kmer_loc;		// loc in total assembly
-	//vector <vector <vector <vector<array<uint16_t, 2>>>>> hit_map(contig_count);
-	//vector<vector<unsigned>> hit_map(contig_count);
-	//unsigned hit_map[contig_count][contig_count];
+
 	unsigned** hit_map = new unsigned*[contig_count];
 	for(unsigned i = 0; i < contig_count; ++i){
 		hit_map[i] = new unsigned[contig_count];
@@ -192,17 +135,7 @@ int main(int argc, char** argv) {
 	unsigned end_dist_2;
 	unsigned c_1 =0;
 	unsigned c_2=0;
-	//unsigned orient_enum; // 0,1,2,3,4
-	//unsigned distance_enum;
-	//unsigned cur_frag_distance;
 
-	/// init size of vectors --------
-	//for(unsigned i = 0; i < hit_map.size(); i++){
-	//	hit_map[i].resize(contig_count);	
-	//}
-	
-	//unsigned kmer_dist = d_arg * 1.2;
-	//unsigned expected_total_edge_dist = d_arg * 0.2;
 	unordered_map<ID, unsigned>::iterator it_1;
 	unordered_map<ID, unsigned>::iterator it_2;
 
@@ -222,7 +155,15 @@ int main(int argc, char** argv) {
 			//std::cerr << "debug 1 " << std::endl;
 			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
 			ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);
+
+
 			while(itr2 != itr2.end()){
+				std::cout << "itr1->get_forward_hash(): " << itr1->get_forward_hash() << std::endl;
+				std::cout << "itr1->get_forward_hash(): " << itr1->get_reverse_hash()<< std::endl;
+				++itr1;
+				++itr2;
+				continue;
+
 				//std::cerr << "debug 2 " << std::endl;
 				if(m_filter.at_rank(*itr1,m_rank_pos_1) && m_filter.at_rank(*itr2,m_rank_pos_2)){ // check both kmer exists
 					//std::cerr << "debug 3 " << std::endl;
@@ -231,9 +172,6 @@ int main(int argc, char** argv) {
 
 					filter(m_map_1,m_data_1,2); // filter out IDs occuring less than 2
 					filter(m_map_2,m_data_2,2);
-
-					//std::cerr << "m_map1 size: " << m_map_1.size() << std::endl;
-					//std::cerr << "m_map2 size: " << m_map_2.size() << std::endl;
 
 					// Get an iterator pointing to begining of map
 					it_1 = m_map_1.begin();
