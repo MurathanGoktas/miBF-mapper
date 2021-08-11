@@ -71,12 +71,14 @@ unordered_map<ID,unsigned> filter(unordered_map<ID,unsigned> &res_map, vector<ID
 	return res_map;
 }
 
+/*
 void populate_hitmatrix(SpMat &hit_matrix, unsigned c1, unsigned c2, unsigned start_dist_1, unsigned end_dist_1, unsigned start_dist_2, unsigned end_dist_2){
 	if(hit_matrix.isCompressed()){
 		int o = c1+  c2+  start_dist_1+  end_dist_1+  start_dist_2+ end_dist_2;;
 		++o;
 	}
 }
+*/
 
 int main(int argc, char** argv) {
 	// read arguments --------
@@ -128,7 +130,7 @@ int main(int argc, char** argv) {
 	for(unsigned i = 0; i < contig_count; ++i){
 		hit_map[i] = new unsigned[contig_count];
 	}
-	SpMat hit_matrix(contig_count,contig_count*4*sizeof(distance_categories)*2); //(ctCount,ctCount*orients*dist*{links,sumgap})
+	//SpMat hit_matrix(contig_count,contig_count*4*sizeof(distance_categories)*2); //(ctCount,ctCount*orients*dist*{links,sumgap})
 	unsigned start_dist_1;
 	unsigned start_dist_2;
 	unsigned end_dist_1;
@@ -153,17 +155,21 @@ int main(int argc, char** argv) {
 		btllib::SeqReader reader(fasta_path, 8, 1);
 		for (btllib::SeqReader::Record record; (record = reader.read());) {
 			//std::cerr << "debug 1 " << std::endl;
-			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
-			ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);
+			btllib::NtHash nthash1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
+			btllib::NtHash nthash2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);
+
+			//ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
+			//ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),frag_distances[i]);
 
 
-			while(itr2 != itr2.end()){
-				std::cout << "itr1->get_forward_hash(): " << itr1->get_forward_hash() << std::endl;
-				std::cout << "itr1->get_forward_hash(): " << itr1->get_reverse_hash()<< std::endl;
-				++itr1;
-				++itr2;
+			while(nthash1.roll() && nthash2.roll()){
+				std::cout << "itr1->get_forward_hash(): " << nthash1.get_forward_hash() << std::endl;
+				std::cout << "itr1->get_forward_hash(): " << nthash1.get_reverse_hash()<< std::endl;
+				//++itr1;
+				//++itr2;
 				continue;
 
+				/*
 				//std::cerr << "debug 2 " << std::endl;
 				if(m_filter.at_rank(*itr1,m_rank_pos_1) && m_filter.at_rank(*itr2,m_rank_pos_2)){ // check both kmer exists
 					//std::cerr << "debug 3 " << std::endl;
@@ -200,7 +206,7 @@ int main(int argc, char** argv) {
 							//std::cerr << "debug 7 " << std::endl;
 							++pair_found;
 							//populate_hitmap(hit_map,cur_frag_distance,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2);
-							populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2); //veryslow thus commented
+							//populate_hitmatrix(hit_matrix,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2); //veryslow thus commented
 
 							++it_2;
 						}
@@ -210,6 +216,7 @@ int main(int argc, char** argv) {
 				}
 				++itr1;
 				++itr2;
+				*/
 			}
 			//std::cerr << "read_counter " << read_counter << std::endl;
 			++read_counter;
