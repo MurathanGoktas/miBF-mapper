@@ -7,7 +7,7 @@ biobloompair_CPPFLAGS = -I$(top_srcdir)/MIBFPair \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/btllib/include
 
-biobloompair_LDADD = $(top_builddir)/Common/libcommon.a -lz -lsdsl
+biobloompair_LDADD = $(top_builddir)/Common/libcommon.a -lz -lsdsl -ldivsufsort -ldivsufsort64
 	
 biobloompair_LDFLAGS = $(OPENMP_CXXFLAGS)
 
