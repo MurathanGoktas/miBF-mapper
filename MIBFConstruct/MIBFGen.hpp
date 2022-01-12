@@ -113,6 +113,7 @@ public:
 					}
 				}
 				gzclose(fp);
+				std::cout << m_start_pos[0] << " " << m_start_pos[1] << std::endl; // debug
 			}
 		}
 
@@ -168,18 +169,18 @@ public:
 				int l;
 				for (;;) {
 					string sequence, name;
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = m_fileNames[i].substr(
-									m_fileNames[i].find_last_of("/") + 1);
-						}
+					
+					l = kseq_read(seq);
+					if (l >= 0) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = m_fileNames[i].substr(
+								m_fileNames[i].find_last_of("/") + 1);
 					}
+					
 					if (l >= 0) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else {
 						break;
@@ -208,14 +209,14 @@ public:
 				int l;
 				for (;;) {
 					string sequence, name;
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = m_fileNames[i].substr(
-									m_fileNames[i].find_last_of("/") + 1);
-						}
+					
+					l = kseq_read(seq);
+					if (l >= 0) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = m_fileNames[i].substr(
+								m_fileNames[i].find_last_of("/") + 1);
 					}
+					
 					if (l >= 0) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
@@ -238,17 +239,16 @@ public:
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = string(seq->name.s, seq->name.l);
-						}
+					l = kseq_read(seq);
+					if (l >= 0) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = string(seq->name.s, seq->name.l);
 					}
+					
 					if (l >= 0) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else {
 						break;
@@ -272,17 +272,17 @@ public:
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = string(seq->name.s, seq->name.l);
-						}
+					
+					l = kseq_read(seq);
+					if (l >= 0) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = string(seq->name.s, seq->name.l);
 					}
+					
 					if (l >= 0) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else {
 						break;
