@@ -46,11 +46,10 @@ public:
 			m_kmerSize(kmerSize), m_expectedEntries(numElements), m_fileNames(filenames) {
 		//Instantiate dense hash map
 		m_ids.push_back(""); //first entry is empty
-		// m_start_pos.push_back(0);
+		m_start_pos.push_back(0);
 		//dense hash maps take POD, and strings need to live somewhere
 		m_nameToID.set_empty_key(m_ids[0]);
 		size_t counts = 0;
-		std::cout << "here 01" << std::endl;
 		if (opt::idByFile) {
 			for (unsigned i = 0; i < m_fileNames.size(); ++i) {
 				m_ids.push_back(m_fileNames[i].substr(
@@ -96,7 +95,8 @@ public:
 				}
 				kseq_t *seq = kseq_init(fp);
 				int l;
-				std::cout << "here 02" << std::endl;
+				ofstream myFile("id-file.txt");
+				myFile << "name ID startPos len" << std::endl; 
 				for (;;) {
 					l = kseq_read(seq);
 					if (l >= 0) {
@@ -107,11 +107,15 @@ public:
 						m_start_pos.push_back(prev_total_length);
 						prev_total_length += seq->seq.l;
 						m_contig_length.push_back(seq->seq.l);
+						
+						std::cout << "m_start_pos.back() " << m_start_pos.back() << std::endl;
+						myFile << m_ids.back() << " " << m_nameToID[m_ids.back()] << " " << m_start_pos[m_nameToID[m_ids.back()]] << " " << seq->seq.l << std::endl; 
 					} else {
 						kseq_destroy(seq);
 						break;
 					}
 				}
+				myFile.close();
 				gzclose(fp);
 				std::cout << m_start_pos[0] << " " << m_start_pos[1] << std::endl; // debug
 			}
@@ -119,6 +123,8 @@ public:
 
 		//make saturation bit is not exceeded
 		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 1)));
+		//make strand bit is not exceeded
+		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 2)));
 
 		//estimate number of k-mers
 		if (m_expectedEntries == 0) {
