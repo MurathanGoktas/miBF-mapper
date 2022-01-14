@@ -3,13 +3,14 @@
 #include <string>
 #include <vector>
 #include <iostream>
+//#include <map>
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
 
 typedef uint32_t ID;
 
 using namespace std;
 
-unsigned findContigBS(vector<unsigned> &m_pos, unsigned first, unsigned last, unsigned search_pos){
+unsigned findContigBS(map<unsigned,unsigned> &m_pos, unsigned first, unsigned last, unsigned search_pos){
 	unsigned middle;
 	if(last >= first)
 	{
@@ -31,7 +32,7 @@ unsigned findContigBS(vector<unsigned> &m_pos, unsigned first, unsigned last, un
 	return -1;
 }
 
-unsigned getEdgeDistances(vector<unsigned> &m_pos, unsigned search_pos, unsigned &start_dist, unsigned &end_dist){
+unsigned getEdgeDistances(map<unsigned,unsigned> &m_pos, unsigned search_pos, unsigned &start_dist, unsigned &end_dist){
 	unsigned contig_id;
 	contig_id = findContigBS(m_pos, 0, m_pos.size() - 1, search_pos);
 	start_dist = search_pos - m_pos[contig_id];
@@ -114,7 +115,10 @@ int main(int argc, char** argv) {
 	
 	// declare data obejct
 	unsigned contig_count;
-	vector<unsigned> m_pos;
+	map<unsigned,unsigned> m_pos;
+	vector<string> m_name;
+	vector<unsigned> m_id;
+	map<unsigned,unsigned> m_length;
 
 	/// report variables declared --------
 	unsigned processed_read_count = 0;
@@ -126,32 +130,122 @@ int main(int argc, char** argv) {
 	/// report variables declared --------
 
 	/// read starting pos vector --------
-	std::ifstream file(std::string(argv[1]) + "_pos.txt");
-	std::string str;
-	while(std::getline(file,str)){
+	//--std::ifstream file(std::string(argv[1]) + "_pos.txt");
+	//--std::string str;
+	//--while(std::getline(file,str)){
 		//m = std::stoi(str);
-		m_pos.push_back(std::stoi(str));
+		//--m_pos.push_back(std::stoi(str));
 		//std::cout << "m: " << m << std::endl;
-	}
-	contig_count = m_pos.size() - 1; // last elements is last index of last contig + 1, not starting pos of any contig
+	//--}
+	//-- copied below -- contig_count = m_pos.size() - 1; // last elements is last index of last contig + 1, not starting pos of any contig
 	/// read string pos vector --------
 
 	/// creating contig length vector --------
 	//unsigned prev_pos = m_pos[0];
-	vector<unsigned> m_length;
+	    ///---vector<unsigned> m_length;
 	// m_length.push_back(m_pos[1]);
-	for(unsigned h = 0; h < contig_count; h++){
-		m_length.push_back(m_pos[h+1] - m_pos[h]);
+	    ///for(unsigned h = 0; h < contig_count; h++){
+		    ///---m_length.push_back(m_pos[h+1] - m_pos[h]);
 		//std::cerr << h << "\t" << m_length.back() << std::endl;
-	}
-	/// creating contig length vector --------
+	   ///--}
+	//////---------------------
+	
+	ifstream idfile;
+    	string word;
+	vector<string> words;
+	// filename of the file
+    	string filename = "id_file.txt";
+  
+    	// opening file
+    	idfile.open(filename.c_str());
 
+	while (idfile >> word) {
+        	words.push_back(word);
+    	}
+	if(words.size() % 4 != 0) {
+		cerr << "Invalid id file.\n";
+	}
+
+	unsigned counter = 0;
+	for (size_t cc = 0; cc < words.size(); cc++)
+	{
+		switch (cc % 4)
+		{
+		case 0:
+    			m_name.push_back(words[cc]);
+			break;
+		case 1:
+			m_id.push_back(std::stoi(words[cc]));
+			break;
+		case 2:
+    			m_pos.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
+			break;
+		case 3:
+    			m_length.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
+			break;
+		default:
+			break;
+		}
+	}
+	
+
+    	// extracting words from the file
+	    /*
+	unsigned counter = 0;
+    	while (idfile >> word)
+    	{
+		switch (counter % 4)
+		{
+		case 0:
+			std::cout << word << std::endl;
+    			m_name.push_back(word);
+			break;
+		case 1:
+			std::cout << word << std::endl;
+			m_id.push_back(std::stoi(word));
+			break;
+		case 2:
+			std::cout << word << std::endl;
+    			m_pos.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(word)));
+			break;
+		case 3:
+			std::cout << word << std::endl;
+    			m_length.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(word)));
+			break;
+		default:
+			break;
+		}
+		++counter;
+	}
+	if(counter % 4 != 0){
+		cerr << "Invalid id file.\n";
+	} else {
+		cout << "Id file read\n";
+	}
+	std::cout << "exited loop" << std::endl;
+	*/
+	idfile.close();
+	
+
+	for (size_t i = 0; i < 3345; i++)
+	{
+		m_name.push_back(to_string(i));
+		m_id.push_back(i);
+		m_pos.insert(pair<unsigned, unsigned>(m_id.back(), i*30000));
+		m_length.insert(pair<unsigned, unsigned>(m_id.back(), 26000));
+	}
+	
+	
+	//////---------------------
+	/// creating contig length vector --------
+	contig_count = m_pos.size() - 1;
+	
 	//reusable objects
 	vector<uint64_t> m_rank_pos_1(m_filter.get_hash_num());
 	vector<uint64_t> m_rank_pos_2(m_filter.get_hash_num());
 	vector<ID> m_data_1(m_filter.get_hash_num());
 	vector<ID> m_data_2(m_filter.get_hash_num());
-	int cur_kmer_loc;		// loc in total assembly
+	//int cur_kmer_loc;		// loc in total assembly
 	//bool all_saturated;
 	//bool all_same;
 	vector<vector<std::array<unsigned, 8>>> hit_map(contig_count);
@@ -166,20 +260,25 @@ int main(int argc, char** argv) {
 	for(unsigned i = 0; i < hit_map.size(); i++){
 		hit_map[i].resize(contig_count);	
 	}
+	std::cout << "here 12" << std::endl;
+	std::cout << "contig_count " << contig_count << std::endl;
 	
 	unsigned kmer_dist = d_arg * 1.2;
 	unsigned expected_total_edge_dist = d_arg * 0.2;
 
 	btllib::SeqReader reader(fasta_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
-		cur_kmer_loc = m_pos[processed_read_count];
+		//std::cout << "here 23" << std::endl;
+		//cur_kmer_loc = m_pos[processed_read_count];
 		ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
 		ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),kmer_dist);
 		while(itr2 != itr2.end()){
+			//std::cout << "here 34" << std::endl;
 			if(m_filter.at_rank(*itr1,m_rank_pos_1) && m_filter.at_rank(*itr2,m_rank_pos_2)){
 				m_data_1 = m_filter.get_data(m_rank_pos_1);
 				m_data_2 = m_filter.get_data(m_rank_pos_2);
 				for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
+					//std::cout << "here 45" << std::endl;
 					if(m_data_1[m] > m_filter.MASK){
 						continue;
 					}
@@ -187,8 +286,8 @@ int main(int argc, char** argv) {
 						if(m_data_2[k] > m_filter.MASK){
 							continue;
 						}
-						bool strand_1 = m_data_1[k] & m_filter.STRAND > 0 ? 1 : 0;
-						bool strand_2 = m_data_2[k] & m_filter.STRAND > 0 ? 1 : 0;
+						bool strand_1 = (m_data_1[k] & m_filter.STRAND) > 0 ? 1 : 0;
+						bool strand_2 = (m_data_2[k] & m_filter.STRAND) > 0 ? 1 : 0;
 						//c_1 = getEdgeDistances(m_pos,m_data_1[m],start_dist_1,end_dist_1);
 						//c_2 = getEdgeDistances(m_pos,m_data_2[k],start_dist_2,end_dist_2);
 						c_1 = getEdgeDistances(m_pos,m_data_1[k] & m_filter.ANTI_STRAND,start_dist_1,end_dist_1); // empty the strand bucket
@@ -196,11 +295,12 @@ int main(int argc, char** argv) {
 						if(c_1 == c_2){
 							continue;
 						}
+						expected_total_edge_dist = (itr2.pos() - itr1.pos()) * 0.2;
 						populate_hit_map(hit_map,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2,expected_total_edge_dist,error_margin,strand_1,strand_2);
 					}
 				}
 			}
-			++cur_kmer_loc;
+			//++cur_kmer_loc;
 			++itr1;
 			++itr2;
 		}
