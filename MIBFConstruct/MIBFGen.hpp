@@ -95,8 +95,8 @@ public:
 				}
 				kseq_t *seq = kseq_init(fp);
 				int l;
-				ofstream myFile("id-file.txt");
-				myFile << "name ID startPos len" << std::endl; 
+				ofstream myFile("id_file.txt");
+				//myFile << "name ID startPos len" << std::endl; 
 				for (;;) {
 					l = kseq_read(seq);
 					if (l >= 0) {
@@ -108,7 +108,7 @@ public:
 						prev_total_length += seq->seq.l;
 						m_contig_length.push_back(seq->seq.l);
 						
-						std::cout << "m_start_pos.back() " << m_start_pos.back() << std::endl;
+						//std::cout << "m_start_pos.back() " << m_start_pos.back() << std::endl;
 						myFile << m_ids.back() << " " << m_nameToID[m_ids.back()] << " " << m_start_pos[m_nameToID[m_ids.back()]] << " " << seq->seq.l << std::endl; 
 					} else {
 						kseq_destroy(seq);
@@ -117,7 +117,7 @@ public:
 				}
 				myFile.close();
 				gzclose(fp);
-				std::cout << m_start_pos[0] << " " << m_start_pos[1] << std::endl; // debug
+				//std::cout << m_start_pos[0] << " " << m_start_pos[1] << std::endl; // debug
 			}
 		}
 
