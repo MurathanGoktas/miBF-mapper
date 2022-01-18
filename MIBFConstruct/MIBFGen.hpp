@@ -73,7 +73,7 @@ public:
 				int l;
 				for (;;) {
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 #pragma omp atomic
 						counts += seq->seq.l - m_kmerSize + 1;
 					} else {
@@ -99,7 +99,7 @@ public:
 				//myFile << "name ID startPos len" << std::endl; 
 				for (;;) {
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						m_ids.push_back(string(seq->name.s, seq->name.l));
 						m_nameToID[m_ids.back()] = m_ids.size() - 1;
 						counts += seq->seq.l - m_kmerSize + 1;
@@ -177,17 +177,17 @@ public:
 					string sequence, name;
 					
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						sequence = string(seq->seq.s, seq->seq.l);
 						name = m_fileNames[i].substr(
 								m_fileNames[i].find_last_of("/") + 1);
 					}
 					
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
 					} else {
 						break;
 					}
@@ -217,13 +217,13 @@ public:
 					string sequence, name;
 					
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						sequence = string(seq->seq.s, seq->seq.l);
 						name = m_fileNames[i].substr(
 								m_fileNames[i].find_last_of("/") + 1);
 					}
 					
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
@@ -246,12 +246,12 @@ public:
 					string sequence, name;
 #pragma omp critical(seq)
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						sequence = string(seq->seq.s, seq->seq.l);
 						name = string(seq->name.s, seq->name.l);
 					}
 					
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
@@ -280,12 +280,12 @@ public:
 #pragma omp critical(seq)
 					
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						sequence = string(seq->seq.s, seq->seq.l);
 						name = string(seq->name.s, seq->name.l);
 					}
 					
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
@@ -379,11 +379,11 @@ private:
 					string sequence;
 					{
 						l = kseq_read(seq);
-						if (l >= 0) {
+						if (l >= opt::minSize) {
 							sequence = string(seq->seq.s, seq->seq.l);
 						}
 					}
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
 							colliCounts += miBFCS.insertBVColli(itr);
@@ -420,11 +420,11 @@ private:
 #pragma omp critical(seq)
 					{
 						l = kseq_read(seq);
-						if (l >= 0) {
+						if (l >= opt::minSize) {
 							sequence = string(seq->seq.s, seq->seq.l);
 						}
 					}
-					if (l >= 0) {
+					if (l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
 							colliCounts += miBFCS.insertBVColli(itr);

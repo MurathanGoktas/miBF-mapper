@@ -69,6 +69,7 @@ void printHelpDialog() {
 		"k-mer mode options (disabled when using spaced seeds):\n"
 		"  -g, --hash_num=N       Set number of hash functions when using k-mers.\n"
 		"  -k, --kmer_size=N      K-mer size to use to create filter. [25]\n"
+		"  -m, --min_size         Minimum size of contigs to be indexed\n"
 		"\n"
 		"Report bugs to <cjustin@bcgsc.ca>.";
 	cerr << dialog << endl;
@@ -97,6 +98,7 @@ int main(int argc, char *argv[]) {
 			"seed_str", required_argument, NULL, 'S' }, {
 			"hash_num", required_argument, NULL, 'g' }, {
 			"kmer_size", required_argument, NULL, 'k' }, {
+			"min_size", required_argument, NULL, 'm' }, {
 			"num_ele", required_argument, NULL, 'n' }, {
 			"by_file", no_argument, NULL, 'F' }, {
 			"verbose", no_argument, NULL, 'v' }, {
@@ -105,7 +107,7 @@ int main(int argc, char *argv[]) {
 
 	//actual checking step
 	int option_index = 0;
-	while ((c = getopt_long(argc, argv, "p:ht:b:S:g:k:n:Fv",
+	while ((c = getopt_long(argc, argv, "p:ht:b:S:g:k:m:n:Fv",
 			long_options, &option_index)) != -1) {
 		switch (c) {
 		case 'b': {
@@ -146,6 +148,15 @@ int main(int argc, char *argv[]) {
 			stringstream convert(optarg);
 			if (!(convert >> opt::kmerSize)) {
 				cerr << "Error - Invalid set of bloom filter parameters! k: "
+						<< optarg << endl;
+				return 0;
+			}
+			break;
+		}
+		case 'm': {
+			stringstream convert(optarg);
+			if (!(convert >> opt::minSize)) {
+				cerr << "Error - Invalid set of bloom filter parameters! m: "
 						<< optarg << endl;
 				return 0;
 			}
