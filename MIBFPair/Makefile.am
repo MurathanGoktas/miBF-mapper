@@ -12,4 +12,4 @@ biobloompair_LDADD = $(top_builddir)/Common/libcommon.a -lz -lsdsl
 	
 biobloompair_LDFLAGS = $(OPENMP_CXXFLAGS)
 
-biobloompair_SOURCES = MIBFPairContigs.cpp
+biobloompair_SOURCES = MIBFPairContigs_old.cpp
