@@ -122,34 +122,7 @@ int main(int argc, char** argv) {
 
 	/// report variables declared --------
 	unsigned processed_read_count = 0;
-	//unsigned cur_hit = 0;
-	//unsigned total_hit = 0;
-	//unsigned unpresented_kmer = 0;
-	//unsigned presented_kmer = 0;
-	//unsigned total_unsaturated_rank = 0;
-	/// report variables declared --------
 
-	/// read starting pos vector --------
-	//--std::ifstream file(std::string(argv[1]) + "_pos.txt");
-	//--std::string str;
-	//--while(std::getline(file,str)){
-		//m = std::stoi(str);
-		//--m_pos.push_back(std::stoi(str));
-		//std::cout << "m: " << m << std::endl;
-	//--}
-	//-- copied below -- contig_count = m_pos.size() - 1; // last elements is last index of last contig + 1, not starting pos of any contig
-	/// read string pos vector --------
-
-	/// creating contig length vector --------
-	//unsigned prev_pos = m_pos[0];
-	    ///---vector<unsigned> m_length;
-	// m_length.push_back(m_pos[1]);
-	    ///for(unsigned h = 0; h < contig_count; h++){
-		    ///---m_length.push_back(m_pos[h+1] - m_pos[h]);
-		//std::cerr << h << "\t" << m_length.back() << std::endl;
-	   ///--}
-	//////---------------------
-	
 	ifstream idfile;
     	string word;
 	vector<string> words;
@@ -171,59 +144,22 @@ int main(int argc, char** argv) {
 	{
 		switch (cc % 4)
 		{
-		case 0:
-    			m_name.push_back(words[cc]);
-			break;
-		case 1:
-			m_id.push_back(std::stoi(words[cc]));
-			break;
-		case 2:
-    			m_pos.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
-			break;
-		case 3:
-    			m_length.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
-			break;
-		default:
-			break;
+			case 0:
+				m_name.push_back(words[cc]);
+				break;
+			case 1:
+				m_id.push_back(std::stoi(words[cc]));
+				break;
+			case 2:
+				m_pos.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
+				break;
+			case 3:
+				m_length.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
+				break;
+			default:
+				break;
 		}
 	}
-	
-
-    	// extracting words from the file
-	    /*
-	unsigned counter = 0;
-    	while (idfile >> word)
-    	{
-		switch (counter % 4)
-		{
-		case 0:
-			std::cout << word << std::endl;
-    			m_name.push_back(word);
-			break;
-		case 1:
-			std::cout << word << std::endl;
-			m_id.push_back(std::stoi(word));
-			break;
-		case 2:
-			std::cout << word << std::endl;
-    			m_pos.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(word)));
-			break;
-		case 3:
-			std::cout << word << std::endl;
-    			m_length.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(word)));
-			break;
-		default:
-			break;
-		}
-		++counter;
-	}
-	if(counter % 4 != 0){
-		cerr << "Invalid id file.\n";
-	} else {
-		cout << "Id file read\n";
-	}
-	std::cout << "exited loop" << std::endl;
-	*/
 	idfile.close();
 	
 
@@ -268,8 +204,6 @@ int main(int argc, char** argv) {
 
 	btllib::SeqReader reader(fasta_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
-		//std::cout << "here 23" << std::endl;
-		//cur_kmer_loc = m_pos[processed_read_count];
 		ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
 		ntHashIterator itr2(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(),kmer_dist);
 		while(itr2 != itr2.end()){
@@ -286,8 +220,11 @@ int main(int argc, char** argv) {
 						if(m_data_2[k] > m_filter.MASK){
 							continue;
 						}
-						bool strand_1 = (m_data_1[k] & m_filter.STRAND) > 0 ? 1 : 0;
-						bool strand_2 = (m_data_2[k] & m_filter.STRAND) > 0 ? 1 : 0;
+						static bool strand_1 = (m_data_1[k] & m_filter.STRAND) > 0 ? 1 : 0;
+						static bool strand_2 = (m_data_2[k] & m_filter.STRAND) > 0 ? 1 : 0;
+						static bool reverse_1 = strand_1 == itr1.get_strand() ? 1 : 0;
+						static bool reverse_2 = strand_2 == itr2.get_strand() ? 1 : 0;
+						//std::cout << "strand_1: " << strand_1 << " strand_2: " << strand_2 << std::endl; 
 						//c_1 = getEdgeDistances(m_pos,m_data_1[m],start_dist_1,end_dist_1);
 						//c_2 = getEdgeDistances(m_pos,m_data_2[k],start_dist_2,end_dist_2);
 						c_1 = getEdgeDistances(m_pos,m_data_1[k] & m_filter.ANTI_STRAND,start_dist_1,end_dist_1); // empty the strand bucket
@@ -296,7 +233,7 @@ int main(int argc, char** argv) {
 							continue;
 						}
 						expected_total_edge_dist = (itr2.pos() - itr1.pos()) * 0.2;
-						populate_hit_map(hit_map,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2,expected_total_edge_dist,error_margin,strand_1,strand_2);
+						populate_hit_map(hit_map,c_1,c_2,start_dist_1,end_dist_1,start_dist_2,end_dist_2,expected_total_edge_dist,error_margin,reverse_1,reverse_2);
 					}
 				}
 			}
