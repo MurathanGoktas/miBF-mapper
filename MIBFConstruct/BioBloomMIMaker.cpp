@@ -69,7 +69,7 @@ void printHelpDialog() {
 		"k-mer mode options (disabled when using spaced seeds):\n"
 		"  -g, --hash_num=N       Set number of hash functions when using k-mers.\n"
 		"  -k, --kmer_size=N      K-mer size to use to create filter. [25]\n"
-		"  -m, --min_size         Minimum size of contigs to be indexed\n"
+		"  -m, --min_size         Minimum size of contigs to be indexed. [500]\n"
 		"\n"
 		"Report bugs to <cjustin@bcgsc.ca>.";
 	cerr << dialog << endl;
@@ -252,6 +252,7 @@ int main(int argc, char *argv[]) {
 		cerr << "Please pick number of hash values (-g)\n";
 		exit(1);
 	}
+
 
 	if (!opt::sseeds.empty()) {
 		MIBFGen filterGen(inputFiles, opt::kmerSize, opt::entryNum);

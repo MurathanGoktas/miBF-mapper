@@ -76,7 +76,7 @@ public:
 					if (l >= opt::minSize) {
 #pragma omp atomic
 						counts += seq->seq.l - m_kmerSize + 1;
-					} else {
+					} else if (l < 0){
 						kseq_destroy(seq);
 						break;
 					}
@@ -95,7 +95,7 @@ public:
 				}
 				kseq_t *seq = kseq_init(fp);
 				int l;
-				ofstream myFile("id_file.txt");
+				ofstream myFile(opt::prefix + "_id_file.csv");
 				//myFile << "name ID startPos len" << std::endl; 
 				for (;;) {
 					l = kseq_read(seq);
@@ -103,21 +103,18 @@ public:
 						m_ids.push_back(string(seq->name.s, seq->name.l));
 						m_nameToID[m_ids.back()] = m_ids.size() - 1;
 						counts += seq->seq.l - m_kmerSize + 1;
-						//m_start_pos[m_nameToID[m_ids.back()]] = prev_total_length;
 						m_start_pos.push_back(prev_total_length);
 						prev_total_length += seq->seq.l;
 						m_contig_length.push_back(seq->seq.l);
 						
-						//std::cout << "m_start_pos.back() " << m_start_pos.back() << std::endl;
-						myFile << m_ids.back() << " " << m_nameToID[m_ids.back()] << " " << m_start_pos[m_nameToID[m_ids.back()]] << " " << seq->seq.l << std::endl; 
-					} else {
+						myFile << m_ids.back() << "\t" << m_nameToID[m_ids.back()] << "\t" << m_start_pos[m_nameToID[m_ids.back()]] << "\t" << seq->seq.l << std::endl; 
+					} else if (l < 0){
 						kseq_destroy(seq);
 						break;
 					}
 				}
 				myFile.close();
 				gzclose(fp);
-				//std::cout << m_start_pos[0] << " " << m_start_pos[1] << std::endl; // debug
 			}
 		}
 
@@ -188,7 +185,7 @@ public:
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -228,7 +225,7 @@ public:
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -256,7 +253,7 @@ public:
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -290,7 +287,7 @@ public:
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -389,7 +386,7 @@ private:
 							colliCounts += miBFCS.insertBVColli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -430,7 +427,7 @@ private:
 							colliCounts += miBFCS.insertBVColli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
