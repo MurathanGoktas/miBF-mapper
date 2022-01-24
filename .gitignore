@@ -37,7 +37,7 @@ ehthumbs.db
 Thumbs.db
 
 
-
+*.deps*
 MIBFPair/.deps/
 MIBFPair/Makefile
 MIBFPair/Makefile.in
@@ -68,3 +68,5 @@ install-sh
 missing
 stamp-h1
 Tests/
+MIBFAnalyze/mibfanalyze
+MIBFAnalyze/mibfanalyzereads
