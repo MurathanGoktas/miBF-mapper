@@ -7,7 +7,7 @@ namespace opt {
 	ScoringMethod scoringMethod = SIMPLE;
 
 	unsigned streakThreshold = 3;
-	unsigned threads = 1;
+	unsigned threads = 8;
 
 	FilterType filterType = BLOOMFILTER;
 	const ID EMPTY = 0;
@@ -29,6 +29,7 @@ namespace opt {
 	
 	std::string prefix = "";
 	unsigned kmerSize = 25;
+	unsigned minSize = 500;
 	unsigned hashNum = 0;
 	unsigned numEle = 0;
 	std::string subtract = "";

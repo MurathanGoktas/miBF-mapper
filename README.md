@@ -1,4 +1,4 @@
-This is project for designing a scaffolding tool with miBF usage. The algorithm imitates LINKS as much as it can.
+Tthis is project for designing a scaffolding tool with miBF usage. The algorithm imitates LINKS as much as it can.
 
 Submodules:
   * btllib
@@ -6,6 +6,7 @@ Submodules:
 
 Dependent subdirectory:
   * Common
+  * eigen(sparsematrix)
 
 After cloning directly from the repository run:
 ```bash

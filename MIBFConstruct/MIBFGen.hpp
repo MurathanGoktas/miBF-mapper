@@ -46,11 +46,10 @@ public:
 			m_kmerSize(kmerSize), m_expectedEntries(numElements), m_fileNames(filenames) {
 		//Instantiate dense hash map
 		m_ids.push_back(""); //first entry is empty
-		// m_start_pos.push_back(0);
+		m_start_pos.push_back(0);
 		//dense hash maps take POD, and strings need to live somewhere
 		m_nameToID.set_empty_key(m_ids[0]);
 		size_t counts = 0;
-		std::cout << "here 01" << std::endl;
 		if (opt::idByFile) {
 			for (unsigned i = 0; i < m_fileNames.size(); ++i) {
 				m_ids.push_back(m_fileNames[i].substr(
@@ -74,10 +73,10 @@ public:
 				int l;
 				for (;;) {
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 #pragma omp atomic
 						counts += seq->seq.l - m_kmerSize + 1;
-					} else {
+					} else if (l < 0){
 						kseq_destroy(seq);
 						break;
 					}
@@ -96,28 +95,33 @@ public:
 				}
 				kseq_t *seq = kseq_init(fp);
 				int l;
-				std::cout << "here 02" << std::endl;
+				ofstream myFile(opt::prefix + "_id_file.txt");
+				//myFile << "name ID startPos len" << std::endl; 
 				for (;;) {
 					l = kseq_read(seq);
-					if (l >= 0) {
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						m_ids.push_back(string(seq->name.s, seq->name.l));
 						m_nameToID[m_ids.back()] = m_ids.size() - 1;
 						counts += seq->seq.l - m_kmerSize + 1;
-						//m_start_pos[m_nameToID[m_ids.back()]] = prev_total_length;
 						m_start_pos.push_back(prev_total_length);
 						prev_total_length += seq->seq.l;
 						m_contig_length.push_back(seq->seq.l);
-					} else {
+						
+						myFile << m_ids.back() << "\t" << m_nameToID[m_ids.back()] << "\t" << m_start_pos[m_nameToID[m_ids.back()]] << "\t" << seq->seq.l << std::endl; 
+					} else if (l < 0){
 						kseq_destroy(seq);
 						break;
 					}
 				}
+				myFile.close();
 				gzclose(fp);
 			}
 		}
 
 		//make saturation bit is not exceeded
 		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 1)));
+		//make strand bit is not exceeded
+		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 2)));
 
 		//estimate number of k-mers
 		if (m_expectedEntries == 0) {
@@ -168,20 +172,20 @@ public:
 				int l;
 				for (;;) {
 					string sequence, name;
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = m_fileNames[i].substr(
-									m_fileNames[i].find_last_of("/") + 1);
-						}
+					
+					l = kseq_read(seq);
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = m_fileNames[i].substr(
+								m_fileNames[i].find_last_of("/") + 1);
 					}
-					if (l >= 0) {
+					
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
-					} else {
+						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -208,20 +212,20 @@ public:
 				int l;
 				for (;;) {
 					string sequence, name;
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = m_fileNames[i].substr(
-									m_fileNames[i].find_last_of("/") + 1);
-						}
+					
+					l = kseq_read(seq);
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = m_fileNames[i].substr(
+								m_fileNames[i].find_last_of("/") + 1);
 					}
-					if (l >= 0) {
+					
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -238,19 +242,18 @@ public:
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = string(seq->name.s, seq->name.l);
-						}
+					l = kseq_read(seq);
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = string(seq->name.s, seq->name.l);
 					}
-					if (l >= 0) {
+					
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -272,19 +275,19 @@ public:
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					{
-						l = kseq_read(seq);
-						if (l >= 0) {
-							sequence = string(seq->seq.s, seq->seq.l);
-							name = string(seq->name.s, seq->name.l);
-						}
+					
+					l = kseq_read(seq);
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
+						sequence = string(seq->seq.s, seq->seq.l);
+						name = string(seq->name.s, seq->name.l);
 					}
-					if (l >= 0) {
+					
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -373,17 +376,17 @@ private:
 					string sequence;
 					{
 						l = kseq_read(seq);
-						if (l >= 0) {
+						if (l >= 0 && seq->seq.l >= opt::minSize) {
 							sequence = string(seq->seq.s, seq->seq.l);
 						}
 					}
-					if (l >= 0) {
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
 							colliCounts += miBFCS.insertBVColli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
@@ -414,17 +417,17 @@ private:
 #pragma omp critical(seq)
 					{
 						l = kseq_read(seq);
-						if (l >= 0) {
+						if (l >= 0 && seq->seq.l >= opt::minSize) {
 							sequence = string(seq->seq.s, seq->seq.l);
 						}
 					}
-					if (l >= 0) {
+					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
 							colliCounts += miBFCS.insertBVColli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
-					} else {
+					} else if (l < 0){
 						break;
 					}
 				}
