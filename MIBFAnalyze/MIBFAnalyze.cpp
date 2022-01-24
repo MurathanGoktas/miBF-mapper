@@ -14,13 +14,12 @@ using namespace std;
 
 int main(int argc, char** argv) {
 	// read arguments --------
-	if(argc != 4){
-		std::cout << " Usage:\n [miBF path + prefix] [draft genome file to query] [base_name]\n";
+	if(argc != 3){
+		std::cout << " Usage:\n [miBF path + prefix] [draft genome file to query]\n";
 		return -1;
 	}
 	std::string mibf_path =  argv[1];
 	std::string draft_genome_path = argv[2];
-	std::string base_name = argv[3];
 	// read arguments --------
 	// create miBF
 	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
@@ -40,7 +39,7 @@ int main(int argc, char** argv) {
     	string word;
 	vector<string> words;
 	// filename of the file
-    	string filename = "id_file.txt";
+    	string filename = mibf_path + "_id_file.txt";
   
     	// opening file
     	idfile.open(filename.c_str());
@@ -48,7 +47,7 @@ int main(int argc, char** argv) {
 	while (idfile >> word) {
         	words.push_back(word);
     	}
-	if(words.size() % 4 != 0) {
+	if(words.size() % 4 != 0 || words.size() == 0) {
 		cerr << "Invalid id file.\n";
 	}
 
@@ -59,6 +58,7 @@ int main(int argc, char** argv) {
 		switch (cc % 4)
 		{
 			case 0:
+				std::cout << words[cc] << std::endl;
 				m_name.push_back(words[cc]);
 				break;
 			case 1:
@@ -91,12 +91,17 @@ int main(int argc, char** argv) {
 	uint saturated_no_rep_id = 0;
 
 	uint contig_id;
-
-	ofstream id_rep_file(base_name + "_id_rep.txt");
+	// read_name	mibf_id		start_pos	length
+	ofstream id_rep_file(mibf_path + "_id_rep_by_pos.tsv");
 
 	btllib::SeqReader reader(draft_genome_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
-		contig_id = m_name_vec[record.name];
+		//Don't analyze the contigs absent in id file as those are not indexed into miBF.
+		if(std::find(m_name.begin(), m_name.end(), record.id) == m_name.end() ){
+			continue;
+		}
+		contig_id = m_name_vec[record.id];
+
 		ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
 
 		while(itr1 != itr1.end()){
@@ -110,7 +115,7 @@ int main(int argc, char** argv) {
 					m_data_1[m] = m_data_1[m] & m_filter.ANTI_STRAND;
 
 					if(m_data_1[m] > m_filter.MASK){ // saturated
-						if(m_data_1[m] & m_filter.ANTI_MASK == cur_true_pos) {
+						if((m_data_1[m] & m_filter.ANTI_MASK) == cur_true_pos) {
 							++saturated_rep_id;
 						} else { // saturated, no id hit
 							++saturated_no_rep_id;
@@ -123,11 +128,10 @@ int main(int argc, char** argv) {
 					}
 				}	
 				// contig_id pos_id unsat_rep_count sat_rep_count
-				id_rep_file << contig_id << " " << itr1.pos() << " " << unsaturated_rep_id << " " << saturated_rep_id << " " << saturated_no_rep_id << std::endl; 
+				id_rep_file << contig_id << "\t" << itr1.pos() << "\t" << unsaturated_rep_id << "\t" << saturated_rep_id << "\t" << saturated_no_rep_id << std::endl; 
 			}  else {
 					std::cerr << "ERROR: No bit vector hit." << " Please check you are querying the same draft genome the miBF is built with." << std::endl;
 			}
-			//++cur_kmer_loc;
 			++itr1;
 		}
 	}
