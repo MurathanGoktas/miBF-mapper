@@ -13,6 +13,7 @@ using namespace std;
 
 
 int main(int argc, char** argv) {
+	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 	// read arguments --------
 	if(argc != 3){
 		std::cout << " Usage:\n [miBF path + prefix] [draft genome file to query]\n";

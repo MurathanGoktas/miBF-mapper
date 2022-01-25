@@ -6,6 +6,12 @@
 #include <iostream>
 //#include <map>
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
+#include "config.h"
+
+#include <stdio.h>
+
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
 
 typedef uint32_t ID;
 
@@ -42,6 +48,8 @@ unsigned getEdgeDistances(map<unsigned,unsigned> &m_pos, unsigned search_pos, un
 }
 
 int main(int argc, char** argv) {
+	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
+	//std::scout << GITCOMMIT << std::endl;
 	// read arguments --------
 	if(argc != 3){
 		std::cout << " Usage:\n [miBF path + prefix] [reads to query]\n";

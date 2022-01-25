@@ -57,8 +57,12 @@ fi
 # Find the absolute paths.
 srcdir=$(cd $srcdir; pwd)
 
+# Fetch git version
+GITCOMMIT=$(git log -1 --pretty='%h')
+AC_MSG_NOTICE([$GITCOMMIT])
+
 # Set compiler flags.
-AC_SUBST(CPPFLAGS,"-I$srcdir $boost_cppflags $sparsehash_cppflags $sdsl_cppflags $zlib_cppflags $CPPFLAGS")
+AC_SUBST(CPPFLAGS,"-I$srcdir $boost_cppflags $sparsehash_cppflags $sdsl_cppflags $zlib_cppflags $CPPFLAGS -DGITCOMMIT=$GITCOMMIT ")
 AC_SUBST(LDFLAGS,"$sdsl_ldflags $zlib_ldflags $LDFLAGS")
 
 # Checks for header files.

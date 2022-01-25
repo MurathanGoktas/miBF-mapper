@@ -82,7 +82,7 @@ enum {
 
 
 int main(int argc, char *argv[]) {
-
+	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 	bool die = false;
 
 	//switch statement variable

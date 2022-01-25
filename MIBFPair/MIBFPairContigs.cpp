@@ -81,6 +81,7 @@ void populate_hitmatrix(SpMat &hit_matrix, unsigned c1, unsigned c2, unsigned st
 */
 
 int main(int argc, char** argv) {
+	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 	// read arguments --------
 	if(argc != 5){
 		std::cout << " Usage:\n./miBF-Links-tester [miBF path + prefix] [fasta file to query] [max reads to process] [-d arg]\n";

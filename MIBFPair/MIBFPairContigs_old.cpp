@@ -98,6 +98,7 @@ void populate_hit_map(	vector<vector<std::array<unsigned, 8>>> &hit_map, unsigne
 }
 
 int main(int argc, char** argv) {
+	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 	// read arguments --------
 	if(argc != 5){
 		std::cout << " Usage:\n [miBF path + prefix] [fasta file to query] [max reads to process] [-d arg]\n";
