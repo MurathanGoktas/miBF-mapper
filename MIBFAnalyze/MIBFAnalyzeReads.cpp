@@ -9,7 +9,6 @@
 #include "config.h"
 
 #include <stdio.h>
-
 #define STRINGIZE(x) #x
 #define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
 
@@ -51,12 +50,14 @@ int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 	//std::scout << GITCOMMIT << std::endl;
 	// read arguments --------
-	if(argc != 3){
-		std::cout << " Usage:\n [miBF path + prefix] [reads to query]\n";
+	if(argc != 4){
+		std::cerr << " Usage:\n [miBF path + prefix] [reads to query] [base name for output]\n";
 		return -1;
 	}
 	std::string mibf_path =  argv[1];
 	std::string read_set_path = argv[2];
+	std::string base_name = argv[3];
+
 	// read arguments --------
 	// create miBF
 	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
@@ -112,9 +113,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	idfile.close();
-	std::cout << "here 000\n";
 	
-
 	//////---------------------
 	/// creating contig length vector --------
 	//contig_count = m_pos.size() - 1;
@@ -140,7 +139,7 @@ int main(int argc, char** argv) {
 	uint contig_id;
 
 	// read_name	mibf_id		start_pos	length
-	ofstream read_hit_by_pos_file(mibf_path + "_read_hit_by_pos.tsv");
+	ofstream read_hit_by_pos_file(mibf_path + "_" + base_name + "_read_hit_by_pos.tsv");
 	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK; 
 
 	btllib::SeqReader reader(read_set_path, 8, 1); // long flag
