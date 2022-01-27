@@ -20,6 +20,10 @@
 #include "Common/sntHashIterator.hpp"
 #include "../btl_bloomfilter/MIBFConstructSupport.hpp"
 
+#include <stdio.h>
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
+
 using namespace std;
 
 #define PROGRAM "biobloommimaker"

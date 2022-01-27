@@ -6,6 +6,10 @@
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
 //#include <Eigen/SparseCore>
 
+#include <stdio.h>
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
+
 typedef uint32_t ID;
 //typedef Eigen::SparseMatrix<uint32_t> SpMat; // can be splitted into two matrices of 16 and 32 bits
 

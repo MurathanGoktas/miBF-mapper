@@ -6,6 +6,10 @@
 //#include <map>
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
 
+#include <stdio.h>
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
+
 typedef uint32_t ID;
 
 using namespace std;
