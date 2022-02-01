@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
 					} else {
 						if(m_data_1[m] == cur_true_pos) {
 							++unsaturated_rep_id;
-						}
+						} 
 					}
 				}	
 				// contig_id pos_id unsat_rep_count sat_rep_count
