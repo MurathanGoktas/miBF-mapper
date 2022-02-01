@@ -7,7 +7,7 @@ namespace opt {
 	ScoringMethod scoringMethod = SIMPLE;
 
 	unsigned streakThreshold = 3;
-	unsigned threads = 8;
+	unsigned threads = 1;
 
 	FilterType filterType = BLOOMFILTER;
 	const ID EMPTY = 0;
