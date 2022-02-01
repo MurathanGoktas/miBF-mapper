@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
 					if(target_contig_mibf_ids.find(c_1) ==  target_contig_mibf_ids.end()){
 						continue;
 					}
-					reverse_strand = std::bool(m_data_1[m] & m_filter.STRAND);
+					reverse_strand = bool(m_data_1[m] & m_filter.STRAND);
 					m_data_1[m] = m_data_1[m] & m_filter.ANTI_STRAND;
 
 					if(m_data_1[m] > m_filter.MASK){ // saturated
