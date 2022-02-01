@@ -157,7 +157,11 @@ int main(int argc, char** argv) {
 					if(target_contig_mibf_ids.find(c_1) ==  target_contig_mibf_ids.end()){
 						continue;
 					}
-					reverse_strand = bool(m_data_1[m] & m_filter.STRAND);
+					if(bool((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.get_strand()){
+						reverse_strand = false;
+					} else {
+						reverse_strand = true;
+					}
 					m_data_1[m] = m_data_1[m] & m_filter.ANTI_STRAND;
 
 					if(m_data_1[m] > m_filter.MASK){ // saturated
