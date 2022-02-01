@@ -137,6 +137,7 @@ int main(int argc, char** argv) {
 	unsigned c_1;
 
 	uint contig_id;
+	bool reverse_strand = false;
 
 	// read_name	mibf_id		start_pos	length
 	ofstream read_hit_by_pos_file(mibf_path + "_" + base_name + "_read_hit_by_pos.tsv");
@@ -156,15 +157,17 @@ int main(int argc, char** argv) {
 					if(target_contig_mibf_ids.find(c_1) ==  target_contig_mibf_ids.end()){
 						continue;
 					}
-
+					reverse_strand = std::bool(m_data_1[m] & m_filter.STRAND);
 					m_data_1[m] = m_data_1[m] & m_filter.ANTI_STRAND;
 
 					if(m_data_1[m] > m_filter.MASK){ // saturated
-						read_hit_by_pos_file << record.id << "\t" << c_1 << "\t" << itr1.pos() <<  "\t1\n";
-
+						read_hit_by_pos_file << record.id << "\t" << c_1 << "\t" 
+						<< start_dist_1 << "\t" << itr1.pos() << "\t" << reverse_strand
+						<< "\t1\n";
 					} else {
-						read_hit_by_pos_file << record.id << "\t" << c_1 << "\t" << itr1.pos() <<  "\t0\n";
-
+						read_hit_by_pos_file << record.id << "\t" << c_1 << "\t" 
+						<< start_dist_1 << "\t" << itr1.pos() << "\t" << reverse_strand
+						<< "\t0\n";
 					}
 				}	
 				// contig_id pos_id unsat_rep_count sat_rep_count
