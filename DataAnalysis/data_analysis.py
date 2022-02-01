@@ -131,7 +131,7 @@ def draw_multiple_plots_for_id_rep(y_elem_count,x_elem_count,window_size,contig_
     #fig.savefig("subplots_rand_"+str(random.randrange(1,1000))+".png")
 
 if(len(sys.argv) != 5):
-    print("python3 data_analysis [bf_prefix_file_path] [contig_alignment_sam_file_path] [occ rate of bf]")
+    print("python3 data_analysis [bf_prefix_file_path] [contig_alignment_sam_file_path] [occ rate of bf] [hash num]")
     exit(1)
 
 bf_path = sys.argv[1]
@@ -157,8 +157,8 @@ over_500_aligned_contigs_df = sorted_all_aligned_contigs_df[sorted_all_aligned_c
 over_500_aligned_contigs_df.reset_index() 
 contigs_to_analyze_start_cid = 100
 contigs_to_analyze_end_cid = 125
-#print(over_500_aligned_contigs_df.iloc[contigs_to_analyze_start_cid:contigs_to_analyze_end_cid].to_string())
-
+print(over_500_aligned_contigs_df.iloc[contigs_to_analyze_start_cid:contigs_to_analyze_end_cid].to_string())
+exit(0)
 
 contig_mibf_id_file_df = pd.read_csv(bf_path + "_id_file.txt",
                                       header=None, names=["query_name","contig_mibf_id"], ## query_name = contig_name
