@@ -15,7 +15,7 @@
 typedef uint32_t ID;
 
 const uint MAX_SPACE_BETWEEN_HITS = 50;
-const uint LEAST_UNSAT_HIT_TO_START_REGION = 3;
+const uint LEAST_UNSAT_HIT_TO_START_REGION = 4;
 const uint LEAST_HIT_TO_IN_REGION = 1;
 const uint LEAST_HIT_COUNT_REPORT = 50;
 
@@ -258,12 +258,12 @@ int main(int argc, char** argv) {
 	//////---------------------
 	/// creating contig length vector --------
 	//contig_count = m_pos.size() - 1;
-
+ /*
 	set<uint> target_contig_mibf_ids = {90,1592,1051,3412,870,2732
 	,1080,378,674,4368,548,2717,2718,1762,3521
 	,1393,309,2368,2757,2574,5028,
 	1407,5028,1474};
-	
+*/
 
 	//reusable objects
 	vector<uint64_t> m_rank_pos_1(m_filter.get_hash_num());
@@ -303,11 +303,12 @@ int main(int argc, char** argv) {
 				for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
 					// get contig id by pos
 					c_1 = getEdgeDistances(m_pos,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
-
+/*
 					// check if contig_id is among target contig ids
 					if(target_contig_mibf_ids.find(c_1) ==  target_contig_mibf_ids.end()){
 						continue;
 					}
+*/
 
 					// determine if read hits the contig in miBf in forward or reverse orientation
 					reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.get_strand());
@@ -315,10 +316,11 @@ int main(int argc, char** argv) {
 					saturated = bool(m_data_1[m] > m_filter.MASK);
 
 					// print for debug
+/*
 					read_hit_by_pos_file << record.id << "\t" << c_1 << "\t" 
 					<< start_dist_1 << "\t" << itr1.pos() << "\t" << reverse_strand
 					<< "\t" << saturated << "\n";
-
+*/
 					add_hit_to_vec(hits_vec, c_1, start_dist_1, reverse_strand, saturated);
 				}
 				track_mapping_regions(regions,hits_vec,record.id,itr1.pos());
