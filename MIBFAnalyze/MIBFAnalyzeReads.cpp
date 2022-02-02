@@ -14,6 +14,11 @@
 
 typedef uint32_t ID;
 
+const uint MAX_SPACE_BETWEEN_HITS = 5;
+const uint LEAST_UNSAT_HIT_TO_START_REGION = 2;
+const uint LEAST_HIT_TO_IN_REGION = 1;
+const uint LEAST_HIT_COUNT_REPORT = 5;
+
 using namespace std;
 
 unsigned findContigBS(map<unsigned,unsigned> &m_pos, unsigned first, unsigned last, unsigned search_pos){
@@ -47,12 +52,31 @@ unsigned getEdgeDistances(map<unsigned,unsigned> &m_pos, unsigned search_pos, un
 }
 
 struct MappedRegion{
+	MappedRegion(){}
+
+	MappedRegion(
+		std::string record_id,
+		unsigned contig_id,
+		unsigned first_contig_pos,
+		unsigned last_contig_pos,
+		unsigned total_hit_pos,
+		unsigned total_id_rep,
+		bool reverse_strand
+	): 	record_id(record_id),
+		contig_id(contig_id),
+		first_contig_pos(first_contig_pos),
+		last_contig_pos(last_contig_pos),
+		total_hit_pos(total_hit_pos),
+		total_id_rep(total_id_rep),
+		reverse_strand(reverse_strand){}
+
 	std::string record_id;
 	unsigned contig_id;
 	unsigned first_contig_pos;
 	unsigned last_contig_pos;
 	unsigned total_hit_pos;
-	bool reverse;
+	unsigned total_id_rep;
+	bool reverse_strand;
 };
 
 struct ContigHitsStruct{
@@ -77,18 +101,73 @@ struct ContigHitsStruct{
 	unsigned sat_hits;
 };
 
-/*
-track_mapping_regions(
-	std::string record_id, unsigned contig_id, unsigned contig_start_dist, unsigned contig_end_dist,
-	unsigned itr1.pos(), bool reverse_strand, bool saturated
-){
-	static vector<MappedRegion> regions;
-	// check if mapping is extending existing mapping region
+void track_mapping_regions(vector<MappedRegion>& regions, vector<ContigHitsStruct>& hits_vec, std::string record_id){
+	//static vector<MappedRegion> regions;
+	bool extended = false;
 
-	// if doesn't extend existing region, create mapping region if satisfies threshold
+	for(auto& cur_struct : hits_vec){
+		// check if mapping is extending existing mapping region
+		//std::cout << "\n\n";
+		for(auto& region : regions){
+			if(region.contig_id == cur_struct.contig_id){
+				
+				std::cout << "str: " 
+				<< " contig_start_pos: \t" << cur_struct.contig_start_pos 
+				<< " reverse_strand: \t" << cur_struct.reverse_strand 
+				<< " total_hits: \t" << cur_struct.unsat_hits + cur_struct.sat_hits
+				<< std::endl;
+				std::cout 
+				<< "reg: first_contig_pos: \t" << region.first_contig_pos
+				<< " reverse_strand: \t" << region.reverse_strand 
+				<< " last_contig_pos: \t" << region.last_contig_pos 
+				<< std::endl;
+				
+				if(cur_struct.contig_start_pos > region.last_contig_pos - MAX_SPACE_BETWEEN_HITS){
+					std::cout << "here xx" << std::endl;
+					if(cur_struct.contig_start_pos < region.last_contig_pos + MAX_SPACE_BETWEEN_HITS){
+						std::cout << "here yy" << std::endl;
+						if(cur_struct.sat_hits + cur_struct.unsat_hits >= LEAST_HIT_TO_IN_REGION){
+							std::cout << "here zz" << std::endl;
+							region.last_contig_pos = cur_struct.contig_start_pos;
+							region.total_hit_pos = region.total_hit_pos + 1;
+							region.total_id_rep += cur_struct.sat_hits + cur_struct.unsat_hits;
+							extended = true;
+						}
+					}
+				}
+			}
+		}
+
+		// if doesn't extend existing region, create mapping region if satisfies threshold
+		if(!extended && cur_struct.unsat_hits >= LEAST_UNSAT_HIT_TO_START_REGION){
+			regions.push_back(
+				MappedRegion(
+						record_id,
+						cur_struct.contig_id,
+						cur_struct.contig_start_pos,
+						cur_struct.contig_start_pos,
+						1,
+						cur_struct.sat_hits + cur_struct.unsat_hits,
+						cur_struct.reverse_strand
+					)
+			);
+		}
+	}
+	//MAX_SPACE_BETWEEN_HITS = 5;
+	//LEAST_UNSAT_HIT_TO_START_REGION = 3;
 
 }
-*/
+void print_regions_for_read(vector<MappedRegion> regions, std::string read_id, ofstream& mapped_regions_file){
+	for(auto& region : regions){
+		if(
+			region.total_hit_pos > LEAST_HIT_COUNT_REPORT
+		){
+			mapped_regions_file << read_id << "\t" << region.contig_id << "\t" << region.first_contig_pos << "\t"
+			<< region.last_contig_pos << "\t" << region.reverse_strand << "\t" << region.total_hit_pos << "\t" << region.total_id_rep << std::endl;
+		}
+	}
+}
+
 
 void add_hit_to_vec(	vector<ContigHitsStruct>& hits_vec, unsigned &contig_id, 
 			unsigned &contig_start_dist, bool &reverse_strand, bool &saturated){
@@ -204,9 +283,13 @@ int main(int argc, char** argv) {
 	bool saturated = false;
 
 	vector<ContigHitsStruct> hits_vec;
+	vector<MappedRegion> regions;
 
 	// read_name	mibf_id		start_pos	length
-	ofstream read_hit_by_pos_file(mibf_path + "_" + base_name + "_read_hit_by_pos.tsv");
+	ofstream read_hit_by_pos_file;
+	read_hit_by_pos_file.open(mibf_path + "_" + base_name + "_read_hit_by_pos.tsv");
+	ofstream mapped_regions_file;
+	mapped_regions_file.open(mibf_path + "_" + base_name + "_mapped_regions.tsv");
 	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK; 
 
 	btllib::SeqReader reader(read_set_path, 8, 1); // long flag
@@ -239,27 +322,28 @@ int main(int argc, char** argv) {
 
 					add_hit_to_vec(hits_vec, c_1, start_dist_1, reverse_strand, saturated);
 				}
+				/*
 				for(auto& str : hits_vec){
-					std::cout << str.contig_id << " " << str.contig_start_pos << " " << str.reverse_strand 
-					<< " " << str.unsat_hits << " " << str.sat_hits << std::endl;
+					
+					mapped_regions_file << record.id <<"\t" << str.contig_id << "\t" << str.contig_start_pos << "\t" << str.reverse_strand 
+					<< "\t" << str.unsat_hits << "\t" << str.sat_hits << std::endl;
 				}
 				if(hits_vec.size() > 0){
 					std::cout << "\n\n";
 				}
+				*/
+				track_mapping_regions(regions,hits_vec,record.id);
 				hits_vec.clear();
-				/*
-				track_mapping_regions(
-					record.id, c_1, start_dist_1, end_dist_1,
-					itr1.pos(), reverse_strand, saturated
-				);
-				*/	
 
 				// contig_id pos_id unsat_rep_count sat_rep_count
 			}
 			//++cur_kmer_loc;
 			++itr1;
 		}
+		print_regions_for_read(regions,record.id,mapped_regions_file);
+		regions.clear();
 	}
 	read_hit_by_pos_file.close();
+	mapped_regions_file.close();
 	return 0;
 }
