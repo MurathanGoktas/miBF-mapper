@@ -14,10 +14,12 @@
 
 typedef uint32_t ID;
 
-const uint MAX_SPACE_BETWEEN_HITS = 50;
+const uint MAX_SPACE_BETWEEN_HITS = 200;
 const uint LEAST_UNSAT_HIT_TO_START_REGION = 4;
 const uint LEAST_HIT_TO_IN_REGION = 1;
 const uint LEAST_HIT_COUNT_REPORT = 50;
+const uint MAX_SHIFT_IN_REGION = 10;
+//const uint STEP_SIZE = 1;
 
 using namespace std;
 
@@ -120,13 +122,16 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 				if(cur_struct.reverse_strand == region.reverse_strand){
 					if(cur_struct.contig_start_pos > region.last_contig_pos - MAX_SPACE_BETWEEN_HITS){
 						if(cur_struct.contig_start_pos < region.last_contig_pos + MAX_SPACE_BETWEEN_HITS){
-							if(cur_struct.sat_hits + cur_struct.unsat_hits >= LEAST_HIT_TO_IN_REGION){
-								region.last_contig_pos = cur_struct.contig_start_pos;
-								region.last_read_pos = read_pos;
-								region.total_hit_pos = region.total_hit_pos + 1;
-								region.total_id_rep += cur_struct.sat_hits + cur_struct.unsat_hits;
-								extended = true;
-							}
+							if(	!cur_struct.reverse_strand ?
+								std::abs((cur_struct.contig_start_pos - region.last_contig_pos) - (read_pos - region.last_read_pos)) < MAX_SHIFT_IN_REGION 
+								: std::abs((region.last_contig_pos - cur_struct.contig_start_pos) - (read_pos - region.last_read_pos)) < MAX_SHIFT_IN_REGION)
+									if(cur_struct.sat_hits + cur_struct.unsat_hits >= LEAST_HIT_TO_IN_REGION){
+										region.last_contig_pos = cur_struct.contig_start_pos;
+										region.last_read_pos = read_pos;
+										region.total_hit_pos = region.total_hit_pos + 1;
+										region.total_id_rep += cur_struct.sat_hits + cur_struct.unsat_hits;
+										extended = true;
+									}
 						}
 					}
 				}
