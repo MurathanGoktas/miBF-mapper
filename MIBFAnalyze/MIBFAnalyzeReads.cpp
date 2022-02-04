@@ -15,12 +15,14 @@
 
 typedef uint32_t ID;
 
-const uint MAX_SPACE_BETWEEN_HITS = 200;
-const uint LEAST_UNSAT_HIT_TO_START_REGION = 4;
-const uint LEAST_HIT_IN_REGION = 1;
-const uint LEAST_HIT_COUNT_REPORT = 50;
-const int MAX_SHIFT_IN_REGION = 20;
-//const uint STEP_SIZE = 1;
+/*
+const uint max_space_between_hits = 200;
+const uint least_unsat_hit_to_start_region = 4;
+const uint least_hit_in_region = 1;
+const uint least_hit_count_report = 50;
+const int max_shift_in_region = 20;
+const uint step_size = 1;
+*/
 
 using namespace std;
 
@@ -111,7 +113,9 @@ struct ContigHitsStruct{
 };
 
 void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStruct>& hits_vec, 
-				std::string record_id, unsigned read_pos){
+				std::string record_id, unsigned read_pos,
+				int max_space_between_hits, int least_hit_in_region,
+				int least_unsat_hit_to_start_region, int max_shift_in_region){
 	//static vector<MappedRegion> regions;
 	bool extended = false;
 
@@ -120,36 +124,10 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 		// for reverse_strand contig_start_pos is contig _end pos
 		for(auto& region : regions){
 			if(region.contig_id == cur_struct.contig_id){
-				if(region.contig_id == 4391){
-					std::cout <<
-						"cur_struct -- contig id: " << cur_struct.contig_id <<
-						" contig_start_pos: " << cur_struct.contig_start_pos <<
-						" read_pos " << read_pos <<
-						" reverse_strand: " << cur_struct.reverse_strand <<
-						" unsat_hits: " << cur_struct.unsat_hits <<
-						" sat_hits: " << cur_struct.sat_hits <<
-						std::endl;
-					std::cout <<
-						"region -- contg id: " << region.contig_id <<
-						" first_contig_pos: " << region.first_contig_pos <<
-						" last_contig_pos: " << region.last_contig_pos <<
-						" first_read_pos: " << region.first_read_pos <<
-						" last_read_pos: " << region.last_read_pos <<
-						" total_hit_pos: " << region.total_hit_pos <<
-						" total_id_rep: " << region.total_id_rep <<
-						" reverse_strand: " << region.reverse_strand <<
-						std::endl; 
-				}
 				if(cur_struct.reverse_strand == region.reverse_strand){
-					std::cout << "passed condition 1\n";
-					if(cur_struct.contig_start_pos - region.last_contig_pos < MAX_SPACE_BETWEEN_HITS){
-						std::cout << "passed condition 2\n";
-						if(std::abs((int)(cur_struct.contig_start_pos - region.last_contig_pos) - (int)(read_pos - region.last_read_pos)) < MAX_SHIFT_IN_REGION ){
-							std::cout << "passed condition 3\n";
-							if(cur_struct.sat_hits + cur_struct.unsat_hits >= LEAST_HIT_IN_REGION){
-								if(region.contig_id == 4391){
-									std::cout << "CHANGED REGION!" << std::endl;
-								}
+					if(cur_struct.contig_start_pos - region.last_contig_pos < max_space_between_hits){
+						if(std::abs((int)(cur_struct.contig_start_pos - region.last_contig_pos) - (int)(read_pos - region.last_read_pos)) < max_shift_in_region ){
+							if(cur_struct.sat_hits + cur_struct.unsat_hits >= least_hit_in_region){
 								region.last_contig_pos = cur_struct.contig_start_pos;
 								region.last_read_pos = read_pos;
 								region.total_hit_pos = region.total_hit_pos + 1;
@@ -164,7 +142,7 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 		}
 
 		// if doesn't extend existing region, create mapping region if satisfies threshold
-		if(!extended && cur_struct.unsat_hits >= LEAST_UNSAT_HIT_TO_START_REGION){
+		if(!extended && cur_struct.unsat_hits >= least_unsat_hit_to_start_region){
 			regions.push_back(
 				MappedRegion(
 						record_id,
@@ -178,18 +156,6 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 						cur_struct.reverse_strand
 					)
 			);
-			if(cur_struct.contig_id == 4391){
-				std::cout << "REGION CREATED!\n" <<
-					"contig_id: " << cur_struct.contig_id <<
-					" first_contig_pos: " << cur_struct.contig_start_pos <<
-					" last_contig_pos: " << cur_struct.contig_start_pos <<
-					" first_read_pos: " << read_pos <<
-					" last_read_pos: " << read_pos <<
-					" total_hit_pos: " << 1 <<
-					" total_id_rep: " << cur_struct.sat_hits + cur_struct.unsat_hits <<
-					" reverse_strand: " << cur_struct.reverse_strand <<
-					std::endl;
-			}
 		}
 	}
 
@@ -197,10 +163,11 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 void print_regions_for_read_in_paf_format(	vector<MappedRegion> regions, 
 						btllib::SeqReader::Record& record , 
 						ofstream& mapped_regions_file,
-						map<unsigned,unsigned>& m_length){
+						map<unsigned,unsigned>& m_length,
+						int least_hit_count_report){
 	for(auto& region : regions){
 		if(
-			region.total_hit_pos > LEAST_HIT_COUNT_REPORT
+			region.total_hit_pos > least_hit_count_report
 		){
 			mapped_regions_file << 
 			record.id << "\t" <<
@@ -246,22 +213,22 @@ void add_hit_to_vec(	vector<ContigHitsStruct>& hits_vec, unsigned &contig_id,
 
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
-	//std::scout << GITCOMMIT << std::endl;
 	// read arguments --------
-	if(argc != 9){
+	if(argc != 10){
 		std::cerr << " Usage:\n [miBF path + prefix] [reads to query] [base name for output] " <<
-		"[MAX_SPACE_BETWEEN_HITS] [LEAST_UNSAT_HIT_TO_START_REGION] [LEAST_HIT_IN_REGION] " <<
-		"[LEAST_HIT_COUNT_REPORT] [MAX_SHIFT_IN_REGION]\n";
+		"[max_space_between_hits] [least_unsat_hit_to_start_region] [least_hit_in_region] " <<
+		"[least_hit_count_report] [max_shift_in_region] [step_size]\n";
 		return -1;
 	}
 	std::string mibf_path =  argv[1];
 	std::string read_set_path = argv[2];
 	std::string base_name = argv[3];
-	int MAX_SPACE_BETWEEN_HITS = atoi(argv[4]);
-	int LEAST_UNSAT_HIT_TO_START_REGION = atoi(argv[5]);
-	int LEAST_HIT_IN_REGION = atoi(argv[6]);
-	int LEAST_HIT_COUNT_REPORT = atoi(argv[7]);
-	int MAX_SHIFT_IN_REGION = atoi(argv[8]);
+	int max_space_between_hits = atoi(argv[4]);
+	int least_unsat_hit_to_start_region = atoi(argv[5]);
+	int least_hit_in_region = atoi(argv[6]);
+	int least_hit_count_report = atoi(argv[7]);
+	int max_shift_in_region = atoi(argv[8]);
+	int step_size = atoi(argv[9]); 
 
 	// read arguments --------
 	// create miBF
@@ -318,16 +285,6 @@ int main(int argc, char** argv) {
 		}
 	}
 	idfile.close();
-	
-	//////---------------------
-	/// creating contig length vector --------
-	//contig_count = m_pos.size() - 1;
- /*
-	set<uint> target_contig_mibf_ids = {90,1592,1051,3412,870,2732
-	,1080,378,674,4368,548,2717,2718,1762,3521
-	,1393,309,2368,2757,2574,5028,
-	1407,5028,1474};
-*/
 
 	//reusable objects
 	vector<uint64_t> m_rank_pos_1(m_filter.get_hash_num());
@@ -379,20 +336,16 @@ int main(int argc, char** argv) {
 					//determine saturation bit
 					saturated = bool(m_data_1[m] > m_filter.MASK);
 
-					// print for debug
-/*
-					read_hit_by_pos_file << record.id << "\t" << c_1 << "\t" 
-					<< start_dist_1 << "\t" << itr1.pos() << "\t" << reverse_strand
-					<< "\t" << saturated << "\n";
-*/
 					add_hit_to_vec(hits_vec, c_1, start_dist_1, end_dist_1, reverse_strand, saturated);
 				}
-				track_mapping_regions(regions,hits_vec,record.id,itr1.pos());
+				track_mapping_regions(regions,hits_vec, record.id, itr1.pos(),
+						      max_space_between_hits, least_hit_in_region, least_unsat_hit_to_start_region,
+						      max_shift_in_region);
 				hits_vec.clear();
 			}
 			++itr1;
 		}
-		print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length);
+		print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report);
 		regions.clear();
 	}
 	read_hit_by_pos_file.close();
