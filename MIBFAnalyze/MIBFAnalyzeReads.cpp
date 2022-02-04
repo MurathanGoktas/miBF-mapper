@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <iostream>
+#include <cstdlib> //argparse
 //#include <map>
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
 #include "config.h"
@@ -193,17 +194,28 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 	}
 
 }
-void print_regions_for_read_in_paf_format(vector<MappedRegion> regions, btllib::SeqReader::Record& record , ofstream& mapped_regions_file){
+void print_regions_for_read_in_paf_format(	vector<MappedRegion> regions, 
+						btllib::SeqReader::Record& record , 
+						ofstream& mapped_regions_file,
+						map<unsigned,unsigned>& m_length){
 	for(auto& region : regions){
 		if(
 			region.total_hit_pos > LEAST_HIT_COUNT_REPORT
 		){
 			mapped_regions_file << 
-			record.id << "\t" << region.contig_id << "\t" <<
-			region.first_contig_pos << "\t" << region.last_contig_pos << "\t" <<
-			region.first_read_pos << "\t" << region.last_read_pos << "\t" <<
-			region.reverse_strand << "\t" << region.total_hit_pos << "\t" <<
-			region.total_id_rep << std::endl;
+			record.id << "\t" <<
+			record.seq.length()  << "\t" <<
+			region.first_read_pos << "\t" <<
+			region.last_read_pos << "\t" <<
+			(!region.reverse_strand ? '+' : '-') << "\t" << 
+			region.contig_id << "\t" <<
+			m_length[region.contig_id] << "\t" <<
+			(!region.reverse_strand ? region.first_contig_pos : (m_length[region.contig_id] - region.first_contig_pos))<< "\t" <<
+			(!region.reverse_strand ? region.last_contig_pos : (m_length[region.contig_id] - region.last_contig_pos)) << "\t" <<
+			region.total_hit_pos << "\t" <<
+			region.last_contig_pos - region.first_contig_pos << "\t" <<
+			255  << // skip the qual score for now
+			std::endl;
 		}
 	}
 }
@@ -236,13 +248,20 @@ int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 	//std::scout << GITCOMMIT << std::endl;
 	// read arguments --------
-	if(argc != 4){
-		std::cerr << " Usage:\n [miBF path + prefix] [reads to query] [base name for output]\n";
+	if(argc != 9){
+		std::cerr << " Usage:\n [miBF path + prefix] [reads to query] [base name for output] " <<
+		"[MAX_SPACE_BETWEEN_HITS] [LEAST_UNSAT_HIT_TO_START_REGION] [LEAST_HIT_IN_REGION] " <<
+		"[LEAST_HIT_COUNT_REPORT] [MAX_SHIFT_IN_REGION]\n";
 		return -1;
 	}
 	std::string mibf_path =  argv[1];
 	std::string read_set_path = argv[2];
 	std::string base_name = argv[3];
+	int MAX_SPACE_BETWEEN_HITS = atoi(argv[4]);
+	int LEAST_UNSAT_HIT_TO_START_REGION = atoi(argv[5]);
+	int LEAST_HIT_IN_REGION = atoi(argv[6]);
+	int LEAST_HIT_COUNT_REPORT = atoi(argv[7]);
+	int MAX_SHIFT_IN_REGION = atoi(argv[8]);
 
 	// read arguments --------
 	// create miBF
@@ -373,7 +392,7 @@ int main(int argc, char** argv) {
 			}
 			++itr1;
 		}
-		print_regions_for_read_in_paf_format(regions,record,mapped_regions_file);
+		print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length);
 		regions.clear();
 	}
 	read_hit_by_pos_file.close();
