@@ -5,6 +5,7 @@
 #include <iostream>
 //#include <map>
 #include "btl_bloomfilter/vendor/ntHashIterator.hpp"
+#include "btl_bloomfilter/vendor/stHashIterator.hpp"
 
 #include <stdio.h>
 #define STRINGIZE(x) #x
@@ -29,6 +30,7 @@ int main(int argc, char** argv) {
 	// create miBF
 	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
 	
+
 	// declare data obejct
 	unsigned contig_count;
 	map<unsigned,unsigned> m_pos;
@@ -63,7 +65,6 @@ int main(int argc, char** argv) {
 		switch (cc % 4)
 		{
 			case 0:
-				std::cout << words[cc] << std::endl;
 				m_name.push_back(words[cc]);
 				break;
 			case 1:
@@ -100,44 +101,92 @@ int main(int argc, char** argv) {
 	ofstream id_rep_file(mibf_path + "_id_rep_by_pos.tsv");
 
 	btllib::SeqReader reader(draft_genome_path, 8, 1); // long flag
-	for (btllib::SeqReader::Record record; (record = reader.read());) {
-		//Don't analyze the contigs absent in id file as those are not indexed into miBF.
-		if(std::find(m_name.begin(), m_name.end(), record.id) == m_name.end() ){
-			continue;
-		}
-		contig_id = m_name_vec[record.id];
+	if(!(m_filter.get_seed_values().size() > 0)){
 
-		ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
-
-		while(itr1 != itr1.end()){
-			if(m_filter.at_rank(*itr1,m_rank_pos_1)){ // a bit-vector hit
-				m_data_1 = m_filter.get_data(m_rank_pos_1);
-				unsaturated_rep_id = 0;
-				saturated_rep_id = 0;
-				saturated_no_rep_id = 0;
-				unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
-				for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
-					m_data_1[m] = m_data_1[m] & m_filter.ANTI_STRAND;
-
-					if(m_data_1[m] > m_filter.MASK){ // saturated
-						if((m_data_1[m] & m_filter.ANTI_MASK) == cur_true_pos) {
-							++saturated_rep_id;
-						} else { // saturated, no id hit
-							++saturated_no_rep_id;
-						}
-
-					} else {
-						if(m_data_1[m] == cur_true_pos) {
-							++unsaturated_rep_id;
-						} 
-					}
-				}	
-				// contig_id pos_id unsat_rep_count sat_rep_count
-				id_rep_file << contig_id << "\t" << itr1.pos() << "\t" << unsaturated_rep_id << "\t" << saturated_rep_id << "\t" << saturated_no_rep_id << std::endl; 
-			}  else {
-					std::cerr << "ERROR: No bit vector hit." << " Please check you are querying the same draft genome the miBF is built with." << std::endl;
+		for (btllib::SeqReader::Record record; (record = reader.read());) {
+			//Don't analyze the contigs absent in id file as those are not indexed into miBF.
+			if(std::find(m_name.begin(), m_name.end(), record.id) == m_name.end() ){
+				continue;
 			}
-			++itr1;
+			contig_id = m_name_vec[record.id];
+
+			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
+
+			while(itr1 != itr1.end()){
+				if(m_filter.at_rank(*itr1,m_rank_pos_1)){ // a bit-vector hit
+					m_data_1 = m_filter.get_data(m_rank_pos_1);
+					unsaturated_rep_id = 0;
+					saturated_rep_id = 0;
+					saturated_no_rep_id = 0;
+					unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
+					for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
+						m_data_1[m] = m_data_1[m] & m_filter.ANTI_STRAND;
+
+						if(m_data_1[m] > m_filter.MASK){ // saturated
+							if((m_data_1[m] & m_filter.ANTI_MASK) == cur_true_pos) {
+								++saturated_rep_id;
+							} else { // saturated, no id hit
+								++saturated_no_rep_id;
+							}
+
+						} else {
+							if(m_data_1[m] == cur_true_pos) {
+								++unsaturated_rep_id;
+							} 
+						}
+					}	
+					// contig_id pos_id unsat_rep_count sat_rep_count
+					id_rep_file << contig_id << "\t" << itr1.pos() << "\t" << unsaturated_rep_id << "\t" << saturated_rep_id << "\t" << saturated_no_rep_id << std::endl; 
+				}  else {
+						std::cerr << "ERROR: No bit vector hit." << " Please check you are querying the same draft genome the miBF is built with." << std::endl;
+				}
+				++itr1;
+			}
+		}
+	} else {
+		std::cout << "here at spaced seeds\n";
+		for (btllib::SeqReader::Record record; (record = reader.read());) {
+			//Don't analyze the contigs absent in id file as those are not indexed into miBF.
+			if(std::find(m_name.begin(), m_name.end(), record.id) == m_name.end() ){
+				continue;
+				std::cout << "here at not found id\n";
+			}
+			contig_id = m_name_vec[record.id];
+
+			//ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
+			stHashIterator itr1(record.seq, m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size());
+
+			while(itr1 != itr1.end()){
+				if(m_filter.at_rank(*itr1,m_rank_pos_1)){ // a bit-vector hit
+					m_data_1 = m_filter.get_data(m_rank_pos_1);
+					unsaturated_rep_id = 0;
+					saturated_rep_id = 0;
+					saturated_no_rep_id = 0;
+					unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
+					for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
+						m_data_1[m] = m_data_1[m] & m_filter.ANTI_STRAND;
+
+						if(m_data_1[m] > m_filter.MASK){ // saturated
+							if((m_data_1[m] & m_filter.ANTI_MASK) == cur_true_pos) {
+								++saturated_rep_id;
+							} else { // saturated, no id hit
+								++saturated_no_rep_id;
+							}
+
+						} else {
+							if(m_data_1[m] == cur_true_pos) {
+								++unsaturated_rep_id;
+							}
+						}
+					}	
+					// contig_id pos_id unsat_rep_count sat_rep_count
+					id_rep_file << contig_id << "\t" << itr1.pos() << "\t" << unsaturated_rep_id << "\t" << saturated_rep_id << "\t" << saturated_no_rep_id << std::endl; 
+				} else {
+					std::cerr << "ERROR: No bit vector hit." << " Please check you are querying the same draft genome the miBF is built with." << std::endl;
+					
+				}
+				++itr1;
+			}
 		}
 	}
 	id_rep_file.close();
