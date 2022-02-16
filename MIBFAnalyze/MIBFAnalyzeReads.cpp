@@ -32,28 +32,32 @@ unsigned findContigBS(map<unsigned,unsigned> &m_pos, unsigned first, unsigned la
 	if(last >= first)
 	{
 		if(first + 1 == last){
-			return first;
+			std::cout << "1 first: " << first << " last " << last << std::endl;
+			return search_pos < m_pos[last] ? first : last;
 		}
 		middle = (first + last)/2;
 		if(search_pos == m_pos[first]){
 			return first;
 		}
 		if(m_pos[middle] < search_pos){
+			std::cout << "2 first: " << first << " last " << last << std::endl;
 			return findContigBS(m_pos,middle,last,search_pos);
 		}
 		//Checking if the search element is present in lower half
 		else{
+			std::cout << "3 first: " << first << " last " << last << std::endl;
 			return findContigBS(m_pos,first,middle,search_pos);
 		}
 	}
+	std::cout << "4 first: " << first << " last " << last << std::endl;
 	return -1;
 }
 
-unsigned getEdgeDistances(map<unsigned,unsigned> &m_pos, unsigned search_pos, unsigned &start_dist, unsigned &end_dist){
+unsigned getEdgeDistances(map<unsigned,unsigned> &m_pos, map<unsigned,unsigned> &m_length,unsigned search_pos, unsigned &start_dist, unsigned &end_dist){
 	unsigned contig_id;
-	contig_id = findContigBS(m_pos, 0, m_pos.size() - 1, search_pos);
+	contig_id = findContigBS(m_pos, 1, m_pos.end()->first, search_pos);
 	start_dist = search_pos - m_pos[contig_id];
-	end_dist = m_pos[contig_id + 1] - search_pos;
+	end_dist =  m_pos[contig_id] + m_length[contig_id] - search_pos;
 	return contig_id;
 }
 
@@ -213,8 +217,12 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 			(!region.reverse_strand ? '+' : '-') << "\t" << 
 			region.contig_id << "\t" <<
 			m_length[region.contig_id] << "\t" <<
-			(!region.reverse_strand ? region.first_contig_pos : (m_length[region.contig_id] - region.first_contig_pos))<< "\t" <<
-			(!region.reverse_strand ? region.last_contig_pos : (m_length[region.contig_id] - region.last_contig_pos)) << "\t" <<
+			/*
+			region.first_contig_pos << "\t" <<
+			region.last_contig_pos << "\t" <<
+			*/
+			(!region.reverse_strand ? region.first_contig_pos : m_length[region.contig_id] - region.last_contig_pos)<< "\t" <<
+			(!region.reverse_strand ? region.last_contig_pos : m_length[region.contig_id] - region.first_contig_pos) << "\t" <<
 			region.total_hit_pos << "\t" <<
 			region.last_contig_pos - region.first_contig_pos << "\t" <<
 			0  << // skip the qual score for now
@@ -227,6 +235,9 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 void add_hit_to_vec(	vector<ContigHitsStruct>& hits_vec, unsigned &contig_id, 
 			unsigned &contig_start_dist, unsigned &contig_end_dist, bool &reverse_strand, bool &saturated){
 	bool found = false; 
+	std::cout << "contig_id " << contig_id << std::endl;
+	std::cout << "contig_start_dist " << contig_start_dist << std::endl; 
+
 	for(auto& cur_struct : hits_vec) {
 		if(	cur_struct.contig_id == contig_id 
 			&& (!reverse_strand ? cur_struct.contig_start_pos == contig_start_dist : cur_struct.contig_start_pos == contig_end_dist)
@@ -250,7 +261,7 @@ void add_hit_to_vec(	vector<ContigHitsStruct>& hits_vec, unsigned &contig_id,
 void filter_regions_on_the_fly(vector<MappedRegion>& regions, unsigned read_pos){
 	int i = 0;
 	while(i < regions.size()){
-		if(regions[i].total_hit_pos < 10 && read_pos > regions[i].last_read_pos + 200){
+		if(regions[i].total_hit_pos < 5 && read_pos > regions[i].last_read_pos + 200){
 			regions.erase(regions.begin() + i);
 		} else {
 			++i;
@@ -269,24 +280,6 @@ void consolidate_mapped_regions(vector<MappedRegion>& regions){
 
 	while(i + 1 < regions.size()){
 		if(regions[i].contig_id == regions[i+1].contig_id){
-			if(regions[i].contig_id == 3714){
-				std::cout << "----------------" << std::endl;
-				std::cout << "regions.size() " << regions.size() << std::endl;
-				std::cout << "region.contig_id " << regions[i].contig_id << std::endl;
-				std::cout << "region.reverse_strand " << regions[i].reverse_strand << std::endl;
-				std::cout << "region.first_contig_pos " << regions[i].first_contig_pos << std::endl; 
-				std::cout << "region.last_contig_pos " << regions[i].last_contig_pos << std::endl; 
-				std::cout << "region.first_read_pos " << regions[i].first_read_pos << std::endl; 
-				std::cout << "region.last_read_pos " << regions[i].last_read_pos << std::endl << std::endl;
-
-				std::cout << "region.contig_id " << regions[i+1].contig_id << std::endl;
-				std::cout << "region.reverse_strand " << regions[i+1].reverse_strand << std::endl;
-				std::cout << "region.first_contig_pos " << regions[i+1].first_contig_pos << std::endl; 
-				std::cout << "region.last_contig_pos " << regions[i+1].last_contig_pos << std::endl; 
-				std::cout << "region.first_read_pos " << regions[i+1].first_read_pos << std::endl; 
-				std::cout << "region.last_read_pos " << regions[i+1].last_read_pos << std::endl << std::endl;
-				std::cout << "----------------" << std::endl;
-			}
 			if(regions[i].reverse_strand == regions[i+1].reverse_strand){
 				first_region_diff = (int)(regions[i].last_contig_pos) - (int)(regions[i].last_read_pos);
 				second_region_diff = (int)(regions[i+1].last_contig_pos) - (int)(regions[i+1].last_read_pos); 
@@ -298,9 +291,9 @@ void consolidate_mapped_regions(vector<MappedRegion>& regions){
 					regions[i].total_hit_pos += regions[i+1].total_hit_pos;
 					regions[i].total_id_rep += regions[i+1].total_id_rep;
 					regions.erase(regions.begin()+i+1);
-					//std::cout << "Indel of " << first_region_diff - second_region_diff << std::endl;
-					//std::cout << "regions[i].last_contig_pos " << regions[i].last_contig_pos << std::endl; 
-					//std::cout << "regions[i+1].first_contig_pos " << regions[i+1].first_contig_pos << std::endl; 
+					std::cout << "Indel of " << first_region_diff - second_region_diff << std::endl;
+					std::cout << "regions[i].last_contig_pos " << regions[i].last_contig_pos << std::endl; 
+					std::cout << "regions[i+1].first_contig_pos " << regions[i+1].first_contig_pos << std::endl; 
 				} else{
 					++i;
 					continue;
@@ -379,9 +372,11 @@ int main(int argc, char** argv) {
 				m_name_vec.insert(pair<std::string, unsigned>(m_name.back(), m_id.back()));
 				break;
 			case 2:
+				std::cout << "m_id: " << m_id.back() << " m_pos: " << words[cc] << std::endl;
 				m_pos.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
 				break;
 			case 3:
+				std::cout << "m_id: " << m_id.back() << " m_length: " << words[cc] << std::endl;
 				m_length.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
 				break;
 			default:
@@ -416,7 +411,11 @@ int main(int argc, char** argv) {
 	read_hit_by_pos_file.open(mibf_path + "_" + base_name + "_read_hit_by_pos.tsv");
 	ofstream mapped_regions_file;
 	mapped_regions_file.open(mibf_path + "_" + base_name + ".paf");
-	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK; 
+	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK;
+
+	//c_1 = getEdgeDistances(m_pos,170000,start_dist_1,end_dist_1);
+	//std::cout << "c1: " << c_1 << std::endl;
+	//return 0; 
 
 	btllib::SeqReader reader(read_set_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
@@ -430,8 +429,10 @@ int main(int argc, char** argv) {
 					//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
 					for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
 						// get contig id by pos
-						c_1 = getEdgeDistances(m_pos,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
-
+						c_1 = getEdgeDistances(m_pos,m_length,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
+						if(c_1 == -1){
+							std::cout << "ERROR!!" << std::endl;
+						}
 						// determine if read hits the contig in miBf in forward or reverse orientation
 						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.get_strand());
 						//determine saturation bit
@@ -462,7 +463,7 @@ int main(int argc, char** argv) {
 					//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
 					for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
 						// get contig id by pos
-						c_1 = getEdgeDistances(m_pos,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
+						c_1 = getEdgeDistances(m_pos,m_length,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
 
 						// determine if read hits the contig in miBf in forward or reverse orientation
 						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.get_strand());
@@ -475,14 +476,16 @@ int main(int argc, char** argv) {
 							max_space_between_hits, least_hit_in_region, least_unsat_hit_to_start_region,
 							max_shift_in_region);
 					hits_vec.clear();
+					/*
 					if(filter_counter % 250 == 0){
 						filter_regions_on_the_fly(regions, itr1.pos());
 					}
 					++filter_counter;
+					*/
 				}
 				++itr1;
 			}
-			consolidate_mapped_regions(regions);
+			//consolidate_mapped_regions(regions);
 			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report);
 			regions.clear();
 		}
