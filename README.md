@@ -6,7 +6,10 @@ Submodules:
 
 Dependent subdirectory:
   * Common
-  * eigen(sparsematrix)
+
+Dependetnt software:
+  * pypaf module
+  * LINKS
 
 After cloning directly from the repository run:
 ```bash
@@ -14,6 +17,6 @@ After cloning directly from the repository run:
 ```
 Compiling BioBloomTools should be as easy as:
 ```bash
-./configure && make
+./configure && make && make install
 ```
 Author: Murathan Goktas
