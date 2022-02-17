@@ -442,6 +442,7 @@ int main(int argc, char** argv) {
 				}
 				++itr1;
 			}
+			consolidate_mapped_regions(regions);
 			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
 			regions.clear();
 		} else {
@@ -476,7 +477,7 @@ int main(int argc, char** argv) {
 				}
 				++itr1;
 			}
-			//consolidate_mapped_regions(regions);
+			consolidate_mapped_regions(regions);
 			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
 			regions.clear();
 		}
