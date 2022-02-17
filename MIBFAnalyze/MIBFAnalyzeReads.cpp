@@ -202,7 +202,8 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 						ofstream& mapped_regions_file,
 						map<unsigned,unsigned>& m_length,
 						int& least_hit_count_report,
-						int& residue_length){
+						int& residue_length,
+						map<unsigned,std::string>& m_name_vec){
 	for(auto& region : regions){
 		if(
 			region.total_hit_pos > least_hit_count_report
@@ -213,12 +214,8 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 			region.first_read_pos << "\t" <<
 			region.last_read_pos + residue_length << "\t" <<
 			(!region.reverse_strand ? '+' : '-') << "\t" << 
-			region.contig_id << "\t" <<
+			m_name_vec[region.contig_id] << "\t" <<
 			m_length[region.contig_id] << "\t" <<
-			/*
-			region.first_contig_pos << "\t" <<
-			region.last_contig_pos << "\t" <<
-			*/
 			(!region.reverse_strand ? region.first_contig_pos : m_length[region.contig_id] - region.last_contig_pos)<< "\t" <<
 			(!region.reverse_strand ? region.last_contig_pos : m_length[region.contig_id] - region.first_contig_pos)  + residue_length << "\t" <<
 			region.total_hit_pos << "\t" <<
@@ -335,7 +332,7 @@ int main(int argc, char** argv) {
 	vector<string> m_name;
 	vector<unsigned> m_id;
 	map<unsigned,unsigned> m_length;
-	map<std::string,unsigned> m_name_vec;
+	map<unsigned,std::string> m_name_vec;
 
 	/// report variables declared --------
 	unsigned processed_read_count = 0;
@@ -365,7 +362,7 @@ int main(int argc, char** argv) {
 				break;
 			case 1:
 				m_id.push_back(std::stoi(words[cc]));
-				m_name_vec.insert(pair<std::string, unsigned>(m_name.back(), m_id.back()));
+				m_name_vec.insert(pair<unsigned,std::string>(m_id.back(),m_name.back()));
 				break;
 			case 2:
 				std::cout << "m_id: " << m_id.back() << " m_pos: " << words[cc] << std::endl;
@@ -445,7 +442,7 @@ int main(int argc, char** argv) {
 				}
 				++itr1;
 			}
-			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length);
+			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
 			regions.clear();
 		} else {
 			stHashIterator itr1(record.seq,m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size());
@@ -480,7 +477,7 @@ int main(int argc, char** argv) {
 				++itr1;
 			}
 			//consolidate_mapped_regions(regions);
-			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length);
+			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
 			regions.clear();
 		}
 	}
