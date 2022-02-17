@@ -201,7 +201,8 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 						btllib::SeqReader::Record& record , 
 						ofstream& mapped_regions_file,
 						map<unsigned,unsigned>& m_length,
-						int& least_hit_count_report){
+						int& least_hit_count_report,
+						int& residue_length){
 	for(auto& region : regions){
 		if(
 			region.total_hit_pos > least_hit_count_report
@@ -210,7 +211,7 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 			record.id << "\t" <<
 			record.seq.length()  << "\t" <<
 			region.first_read_pos << "\t" <<
-			region.last_read_pos << "\t" <<
+			region.last_read_pos + residue_length << "\t" <<
 			(!region.reverse_strand ? '+' : '-') << "\t" << 
 			region.contig_id << "\t" <<
 			m_length[region.contig_id] << "\t" <<
@@ -219,7 +220,7 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 			region.last_contig_pos << "\t" <<
 			*/
 			(!region.reverse_strand ? region.first_contig_pos : m_length[region.contig_id] - region.last_contig_pos)<< "\t" <<
-			(!region.reverse_strand ? region.last_contig_pos : m_length[region.contig_id] - region.first_contig_pos) << "\t" <<
+			(!region.reverse_strand ? region.last_contig_pos : m_length[region.contig_id] - region.first_contig_pos)  + residue_length << "\t" <<
 			region.total_hit_pos << "\t" <<
 			region.last_contig_pos - region.first_contig_pos << "\t" <<
 			0  << // skip the qual score for now
@@ -408,9 +409,7 @@ int main(int argc, char** argv) {
 	mapped_regions_file.open(mibf_path + "_" + base_name + ".paf");
 	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK;
 
-	//c_1 = getEdgeDistances(m_pos,170000,start_dist_1,end_dist_1);
-	//std::cout << "c1: " << c_1 << std::endl;
-	//return 0; 
+	int residue_length = m_filter.get_kmer_size();
 
 	btllib::SeqReader reader(read_set_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
@@ -446,7 +445,7 @@ int main(int argc, char** argv) {
 				}
 				++itr1;
 			}
-			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report);
+			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length);
 			regions.clear();
 		} else {
 			stHashIterator itr1(record.seq,m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size());
@@ -481,7 +480,7 @@ int main(int argc, char** argv) {
 				++itr1;
 			}
 			//consolidate_mapped_regions(regions);
-			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report);
+			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length);
 			regions.clear();
 		}
 	}
