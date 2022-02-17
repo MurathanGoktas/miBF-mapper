@@ -10,4 +10,8 @@ draft_genome="simulated_contigs.fa"
 ## map genome regions to contigs
 /usr/bin/time -pv mibfanalyzereads test_filter simulated_genome.fa test_mapping 200 4 1 50 40 1 
 
+## transform paf file into LINKS tigpair checkpoint
 /usr/bin/time -pv python3 ../MIBFScaffold/create_tigpair_checkpoint.py test_filter_test_mapping.paf test_filter
+
+## scaffold contigs with tigpair checkpoint
+LINKS -f ${draft_genome} -s empty.fof -b test_filter -l 4
