@@ -32,7 +32,6 @@ unsigned findContigBS(map<unsigned,unsigned> &m_pos, unsigned first, unsigned la
 	if(last >= first)
 	{
 		if(first + 1 == last){
-			std::cout << "1 first: " << first << " last " << last << std::endl;
 			return search_pos < m_pos[last] ? first : last;
 		}
 		middle = (first + last)/2;
@@ -40,16 +39,13 @@ unsigned findContigBS(map<unsigned,unsigned> &m_pos, unsigned first, unsigned la
 			return first;
 		}
 		if(m_pos[middle] < search_pos){
-			std::cout << "2 first: " << first << " last " << last << std::endl;
 			return findContigBS(m_pos,middle,last,search_pos);
 		}
 		//Checking if the search element is present in lower half
 		else{
-			std::cout << "3 first: " << first << " last " << last << std::endl;
 			return findContigBS(m_pos,first,middle,search_pos);
 		}
 	}
-	std::cout << "4 first: " << first << " last " << last << std::endl;
 	return -1;
 }
 
@@ -138,8 +134,8 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 		// for reverse_strand contig_start_pos is contig _end pos
 		for(auto& region : regions){
 			if(region.contig_id == cur_struct.contig_id){
-				/*
-				if(cur_struct.contig_id == 4391){
+			/*
+				if(cur_struct.contig_id == 22){
 					std::cout << "------------\n";
 					std::cout << "read_pos " << read_pos << std::endl;
 					std::cout << "regions.size() " << regions.size() << std::endl;
@@ -158,6 +154,7 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 					std::cout << "------------\n";
 				}
 				*/
+				
 				if(cur_struct.reverse_strand == region.reverse_strand){
 					//std::cout << "here a" << std::endl;
 					if(cur_struct.contig_start_pos - region.last_contig_pos < max_space_between_hits){
@@ -235,8 +232,6 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 void add_hit_to_vec(	vector<ContigHitsStruct>& hits_vec, unsigned &contig_id, 
 			unsigned &contig_start_dist, unsigned &contig_end_dist, bool &reverse_strand, bool &saturated){
 	bool found = false; 
-	std::cout << "contig_id " << contig_id << std::endl;
-	std::cout << "contig_start_dist " << contig_start_dist << std::endl; 
 
 	for(auto& cur_struct : hits_vec) {
 		if(	cur_struct.contig_id == contig_id 
@@ -291,9 +286,9 @@ void consolidate_mapped_regions(vector<MappedRegion>& regions){
 					regions[i].total_hit_pos += regions[i+1].total_hit_pos;
 					regions[i].total_id_rep += regions[i+1].total_id_rep;
 					regions.erase(regions.begin()+i+1);
-					std::cout << "Indel of " << first_region_diff - second_region_diff << std::endl;
-					std::cout << "regions[i].last_contig_pos " << regions[i].last_contig_pos << std::endl; 
-					std::cout << "regions[i+1].first_contig_pos " << regions[i+1].first_contig_pos << std::endl; 
+					//std::cout << "Indel of " << first_region_diff - second_region_diff << std::endl;
+					//std::cout << "regions[i].last_contig_pos " << regions[i].last_contig_pos << std::endl; 
+					//std::cout << "regions[i+1].first_contig_pos " << regions[i+1].first_contig_pos << std::endl; 
 				} else{
 					++i;
 					continue;
@@ -476,12 +471,12 @@ int main(int argc, char** argv) {
 							max_space_between_hits, least_hit_in_region, least_unsat_hit_to_start_region,
 							max_shift_in_region);
 					hits_vec.clear();
-					/*
+					
 					if(filter_counter % 250 == 0){
 						filter_regions_on_the_fly(regions, itr1.pos());
 					}
 					++filter_counter;
-					*/
+					
 				}
 				++itr1;
 			}
