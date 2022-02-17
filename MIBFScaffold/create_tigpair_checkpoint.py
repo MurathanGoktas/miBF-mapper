@@ -41,14 +41,12 @@ def get_distance_bin(distance):
         return 10000
 
 def add_to_graph(group):
-    NORMALIZATION_FACTOR = 50
     keys = group.keys()
     for i in range(0, len(group.index)):
         for j in range(i, len(group.index)):
             g1 = paf_df.iloc[group.index[i]]
             g2 = paf_df.iloc[group.index[j]]
             if g1["query_alignment_start"] > g2["query_alignment_start"]:
-                print("1 Here "+g1["reference_name"]+" "+g2["reference_name"])
                 g3 = g1
                 g1 = g2
                 g2 = g3
@@ -69,7 +67,6 @@ def add_to_graph(group):
                                 - g2['reference_start'])
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    print("++ Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
                 else:
                     distance = (read_distance
                                 - (g1['reference_length'] - g1['reference_end']
@@ -77,7 +74,6 @@ def add_to_graph(group):
                     )
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    print("+- Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
             else:
                 if str(g2['strand']) == "+":
                     distance = (read_distance
@@ -86,8 +82,6 @@ def add_to_graph(group):
                     )
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    print("-+ Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
-
                 else:
                     distance = (read_distance
                                 - g1['reference_start']
@@ -95,7 +89,6 @@ def add_to_graph(group):
                     )
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    print("-- Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
             if distance > read_distance:
                 #print("distance > read_distance")
                 continue
