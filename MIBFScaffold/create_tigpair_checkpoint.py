@@ -5,6 +5,7 @@ import pandas as pd
 import random
 import sys
 from pafpy import PafFile
+import math
 
 
 
@@ -40,18 +41,20 @@ def get_distance_bin(distance):
         return 10000
 
 def add_to_graph(group):
+    NORMALIZATION_FACTOR = 50
     keys = group.keys()
     for i in range(0, len(group.index)):
         for j in range(i, len(group.index)):
             g1 = paf_df.iloc[group.index[i]]
             g2 = paf_df.iloc[group.index[j]]
             if g1["query_alignment_start"] > g2["query_alignment_start"]:
+                print("1 Here "+g1["reference_name"]+" "+g2["reference_name"])
                 g3 = g1
                 g1 = g2
                 g2 = g3
             if g1["reference_name"] == g2["reference_name"]:
                 continue
-            read_distance = g2["query_alignment_start"] - g1["query_alignment_start"]
+            read_distance = g2["query_alignment_start"] - g1["query_alignment_end"]
             tuple_1 = ("","",0)
             tuple_2 = ("","",0)
             dist_bin = get_distance_bin(read_distance)
@@ -59,23 +62,14 @@ def add_to_graph(group):
             contig_1_name = str(contig_mibf_id_file_df.loc[contig_mibf_id_file_df['contig_mibf_id'] == int(g1["reference_name"])]['reference_name'].values[0])
             contig_2_name = str(contig_mibf_id_file_df.loc[contig_mibf_id_file_df['contig_mibf_id'] == int(g2["reference_name"])]['reference_name'].values[0])
 
-
-            if g1['strand'] == '+':
-
-                if g2['strand'] == '+':
+            if str(g1['strand']) == "+":
+                if str(g2['strand']) == "+":
                     distance = (read_distance 
                                 - (g1['reference_length'] - g1['reference_end'])
                                 - g2['reference_start'])
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    '''
-                    distance = get_distance(
-                        int(g2["query_alignment_start"]) - int(g1["query_alignment_start"]),
-                        int(g1["reference_length"]),
-                        g1["reference_start"],
-                        g2["reference_start"]
-                    )
-                    '''
+                    print("++ Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
                 else:
                     distance = (read_distance
                                 - (g1['reference_length'] - g1['reference_end']
@@ -83,30 +77,17 @@ def add_to_graph(group):
                     )
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    '''
-                    distance = get_distance(
-                        int(g2["query_alignment_start"]) - int(g1["query_alignment_start"]),
-                        int(g1["reference_length"]),
-                        g1["reference_start"],
-                        int(g2["reference_length"]) - g2["reference_end"]
-                    )
-                    '''
+                    print("+- Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
             else:
-                if g2['strand'] == '+':
+                if str(g2['strand']) == "+":
                     distance = (read_distance
                                 - g2['reference_start']
                                 - g1['reference_start']
                     )
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    '''
-                    distance = get_distance(
-                        int(g2["query_alignment_start"]) - int(g1["query_alignment_start"]),
-                        int(g1["reference_length"]),
-                        g1["reference_length"] - g1["reference_end"],
-                        int(g2["reference_start"])
-                    )
-                    '''
+                    print("-+ Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
+
                 else:
                     distance = (read_distance
                                 - g1['reference_start']
@@ -114,56 +95,52 @@ def add_to_graph(group):
                     )
                     tuple_1 = ("f" + contig_1_name, "f" + contig_2_name, dist_bin)
                     tuple_2 = ("r" + contig_2_name, "r" + contig_1_name, dist_bin)
-                    '''
-                    distance = get_distance(
-                        int(g2["query_alignment_start"]) - int(g1["query_alignment_start"]),
-                        int(g2["reference_length"]),
-                        g2["reference_end"],
-                        int(g1["reference_end"])
-                    )
-                    '''
+                    print("-- Here "+g1["reference_name"]+" "+g2["reference_name"]+" d: "+str(distance))
             if distance > read_distance:
-                print("distance > read_distance")
+                #print("distance > read_distance")
                 continue
+            total_mapped_residue = int(math.log(int(g1["matching_residues"]) + int(g2["matching_residues"])))
             if tuple_1 in contigs_map:
                 #print("here a")
-                total_mapped_residue = int(g1["matching_residues"]) + int(g2["matching_residues"])
+                
                 contigs_map[tuple_1] = (
-                    contigs_map[tuple_1][0] + total_mapped_residue, 
-                    contigs_map[tuple_1][1] + (total_mapped_residue * distance) 
+                    (contigs_map[tuple_1][0] + total_mapped_residue), 
+                    (contigs_map[tuple_1][1] + (total_mapped_residue * distance)) 
                 )
             else:
                 #print("here b")
-                total_mapped_residue = int(g1["matching_residues"]) + int(g2["matching_residues"])
                 contigs_map[tuple_1] = (
                     total_mapped_residue, 
-                    total_mapped_residue * distance
+                    (total_mapped_residue * distance)
                 )
             if tuple_2 in contigs_map:
                 #print("here c")
-                total_mapped_residue = int(g1["matching_residues"]) + int(g2["matching_residues"])
                 contigs_map[tuple_2] = (
-                    contigs_map[tuple_2][0] + total_mapped_residue, 
-                    contigs_map[tuple_2][1] + (total_mapped_residue * distance) 
+                    (contigs_map[tuple_2][0] + total_mapped_residue), 
+                    (contigs_map[tuple_2][1] + (total_mapped_residue * distance)) 
                 )
             else:
                 #print("here d")
-                total_mapped_residue = int(g1["matching_residues"]) + int(g2["matching_residues"])
                 contigs_map[tuple_2] = (
                     total_mapped_residue, 
-                    total_mapped_residue * distance
+                    (total_mapped_residue * distance)
                 )
-            #print(g1)
-            #print(g2)
-            #print("Contig1: " + str(g1['reference_name'])
-            #    + " Contig2: " + str(g2['reference_name'])
-            #    + " distance: " + str(distance))
+            '''
+            print(g1)
+            print(g2)
+            if(abs(int(g1['reference_name'])-int(g2['reference_name'])) == 1):
+                print("Contig1: " + str(g1['reference_name'])
+                    + " Contig2: " + str(g2['reference_name'])
+                    + " distance: " + str(distance))
+            '''
 
 def print_tigpair_checkpoint():
-    f = open("tigpair_checkpoint.tsv", "w")   
+    f = open(bf_path + ".tigpair_checkpoint.tsv", "w")   
 
     for key, value in contigs_map.items():
-        f.write(str(key[2])+"\t"+str(key[1])+"\t"+str(key[0])+"\t"+str(value[0])+"\t"+str(value[1])+"\n")
+        if value[1] < 0:
+            continue
+        f.write(str(key[2])+"\t"+str(key[0])+"\t"+str(key[1])+"\t"+str(value[0])+"\t"+str(value[1])+"\n")
     
     f.close()
 
@@ -180,7 +157,7 @@ read_paf_file(rows,paf_path)
 paf_df = pd.DataFrame(rows, columns=["query_name", "query_length", "query_alignment_start", "query_alignment_end",
                                     "strand", "reference_name", "reference_length", "reference_start", "reference_end",
 				                    "matching_residues", "block_length", "map_quality"])
-print(paf_df)
+##print(paf_df)
 
 sorted_paf_df = paf_df.sort_values(by=['query_name','reference_name','query_alignment_start'])
 sorted_paf_df.reset_index()
@@ -200,10 +177,10 @@ print(over_500_aligned_contigs_df.iloc[contigs_to_analyze_start_cid:contigs_to_a
 contig_mibf_id_file_df = pd.read_csv(bf_path + "_id_file.txt",
                                       header=None, names=["reference_name","contig_mibf_id"], ## query_name = contig_name
                                       sep="\t", usecols = [0,1])     
-print(contig_mibf_id_file_df)
+##print(contig_mibf_id_file_df)
 
-print(paf_df.info())
-print(contig_mibf_id_file_df.info())
+##print(paf_df.info())
+##print(contig_mibf_id_file_df.info())
 
 contigs_map = {}
 
