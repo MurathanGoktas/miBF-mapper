@@ -67,6 +67,5 @@ depcomp
 install-sh
 missing
 stamp-h1
-Tests/
 MIBFAnalyze/mibfanalyze
 MIBFAnalyze/mibfanalyzereads
