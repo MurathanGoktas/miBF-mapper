@@ -43,6 +43,7 @@ namespace opt {
 	//options for new refactored code
 	extern std::string prefix;
 	extern unsigned kmerSize;
+	extern unsigned stepSize;
 	extern unsigned minSize;
 	extern unsigned hashNum;
 	extern unsigned numEle;

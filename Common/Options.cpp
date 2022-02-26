@@ -29,6 +29,7 @@ namespace opt {
 	
 	std::string prefix = "";
 	unsigned kmerSize = 25;
+	unsigned stepSize = 1;
 	unsigned minSize = 500;
 	unsigned hashNum = 0;
 	unsigned numEle = 0;

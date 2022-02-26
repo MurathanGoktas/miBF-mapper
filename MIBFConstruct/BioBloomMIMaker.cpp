@@ -16,7 +16,8 @@
 #include <fstream>
 #include <omp.h>
 #include "MIBFGen.hpp"
-#include "../btl_bloomfilter/vendor/stHashIterator.hpp"
+#include "btl_bloomfilter/vendor/stHashIterator.hpp"
+//#include "btl_bloomfilter/vendor/ntHashIterator.hpp"
 #include "Common/sntHashIterator.hpp"
 #include "../btl_bloomfilter/MIBFConstructSupport.hpp"
 
@@ -63,6 +64,7 @@ void printHelpDialog() {
 		"      --version          Display version information.\n"
 		"  -v  --verbose          Display verbose output.\n"
 		"  -t, --threads=N        The number of threads to use.\n"
+		"  -e  --step_size        Step size for reading sequences.\n"
 		"  -b, --occupancy=N      Occupancy of Bloom filter.[0.5]\n"
 		"  -n, --num_ele=N        Set the number of expected distinct k-mer frames.\n"
 		"                         If set to 0 number is determined from sequences\n"
@@ -98,6 +100,7 @@ int main(int argc, char *argv[]) {
 			"file_prefix", required_argument, NULL, 'p' }, {
 			"help", no_argument, NULL, 'h' }, {
 			"threads", required_argument, NULL, 't' }, {
+			"step_size", required_argument, NULL, 'e' }, {
 			"occupancy", required_argument, NULL, 'b' }, {
 			"seed_str", required_argument, NULL, 'S' }, {
 			"hash_num", required_argument, NULL, 'g' }, {
@@ -111,7 +114,7 @@ int main(int argc, char *argv[]) {
 
 	//actual checking step
 	int option_index = 0;
-	while ((c = getopt_long(argc, argv, "p:ht:b:S:g:k:m:n:Fv",
+	while ((c = getopt_long(argc, argv, "p:ht:b:S:g:k:e:m:n:Fv",
 			long_options, &option_index)) != -1) {
 		switch (c) {
 		case 'b': {
@@ -151,6 +154,15 @@ int main(int argc, char *argv[]) {
 		case 'k': {
 			stringstream convert(optarg);
 			if (!(convert >> opt::kmerSize)) {
+				cerr << "Error - Invalid set of bloom filter parameters! k: "
+						<< optarg << endl;
+				return 0;
+			}
+			break;
+		}
+		case 'e': {
+			stringstream convert(optarg);
+			if (!(convert >> opt::stepSize)) {
 				cerr << "Error - Invalid set of bloom filter parameters! k: "
 						<< optarg << endl;
 				return 0;

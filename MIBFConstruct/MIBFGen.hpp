@@ -447,7 +447,7 @@ private:
 	template<typename H>
 	H hashIterator(const string &seq,
 			const vector<vector<unsigned> > &seedVal) {
-		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize);
+		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize, opt::stepSize);
 	}
 
 	inline void writeIDs(std::ofstream &file) const {

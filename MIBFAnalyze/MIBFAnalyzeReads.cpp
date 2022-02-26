@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
 	int least_hit_in_region = atoi(argv[6]);
 	int least_hit_count_report = atoi(argv[7]);
 	int max_shift_in_region = atoi(argv[8]);
-	int step_size = atoi(argv[9]); 
+	unsigned step_size = atoi(argv[9]); 
 
 	// read arguments --------
 	// create miBF
@@ -411,7 +411,7 @@ int main(int argc, char** argv) {
 	btllib::SeqReader reader(read_set_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
 		if (!(m_filter.get_seed_values().size() > 0)) {
-			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
+			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(), step_size);
 
 			while(itr1 != itr1.end()){
 				if(m_filter.at_rank(*itr1,m_rank_pos_1)){ // a bit-vector hit
@@ -446,7 +446,7 @@ int main(int argc, char** argv) {
 			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
 			regions.clear();
 		} else {
-			stHashIterator itr1(record.seq,m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size());
+			stHashIterator itr1(record.seq,m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size(), step_size);
 
 			while(itr1 != itr1.end()){
 				if(m_filter.at_rank(*itr1,m_rank_pos_1)){ // a bit-vector hit
