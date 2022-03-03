@@ -67,19 +67,17 @@ def overlap(min1,max1,min2,max2):
 
 def check_accuracies(df):
 	last_query_name = ""
-	false_row = 0
-	correct_row = 0
 	cur_overlap = 0
 	for i in range(len(df)):
 		true_ref_name, true_ref_start_pos, query_index, true_strand, head_length, middle_region_length, tail_length = parse_query_name(df.loc[i, "query_name"]) 
 
-		if df.loc[i, "supplementary_alignment"]:
+		if df.loc[i, "supplementary_alignment"] or df.loc[i, "query_name"] in false_set: 
 			continue	
 		if df.loc[i, "reference_name"].split(".")[0] != true_ref_name:
-			false_row += 1
+			false_set.add(df.loc[i, "query_name"])
 			continue
-		if (df.loc[i, "strand"] == '+' and true_strand == "R") or (df.loc[i, "strand"] == '-' and true_strand == "F"): 
-			false_row += 1
+		if (df.loc[i, "strand"] == '+' and true_strand == "R") or (df.loc[i, "strand"] == '-' and true_strand == "F"):
+			false_set.add(df.loc[i, "query_name"])
 			continue
 		
 		true_ref_end_pos = true_ref_start_pos + head_length + middle_region_length
@@ -89,18 +87,16 @@ def check_accuracies(df):
 		if i < len(df) - 1 and df.loc[i, "query_name"] == df.loc[i+1, "query_name"] and df.loc[i, "reference_name"] == df.loc[i+1, "reference_name"]: 
 			continue
 		if cur_overlap > int(middle_region_length) / 10:
-			correct_row += 1
+			true_set.add(df.loc[i, "query_name"])
 		else:
-			false_row +=1
-	
-	print("false_row " + str(false_row))
-	print("correct_row " + str(correct_row))
+			false_set.add(df.loc[i, "query_name"])
 
-if(len(sys.argv) != 2):
-    print("python3 calc_map_accuracy [paf file]")
+if(len(sys.argv) != 3):
+    print("python3 calc_map_accuracy [Nanosim simulated reads] [paf file]")
     exit(1)
 
-paf_path = sys.argv[1]
+simulated_reads = sys.argv[1]
+paf_path = sys.argv[2]
 
 rows = []
 read_paf_file(rows,paf_path)
@@ -108,8 +104,25 @@ paf_df = pd.DataFrame(rows, columns=["query_name", "query_length", "query_alignm
                                     "strand", "reference_name", "reference_length", "reference_start", "reference_end",
 				                    "matching_residues", "block_length", "map_quality"])
 
+simulated_reads_set = set()
+with open(simulated_reads) as file:
+    for line in file:
+        if line[0]=='>':
+            simulated_reads_set.add(line.rstrip()[1:])
+
 flag_suppl_alignments(paf_df)
 
+
+false_set = set()
+true_set = set()
+unaligned_set = set()
 check_accuracies(paf_df)
 
+for read_s in simulated_reads_set:
+    if not (read_s in true_set or read_s in false_set):
+        unaligned_set.add(read_s)
+
+print("True rows " + str(len(true_set)))
+print("False rows " + str(len(false_set)))
+print("Unaligned rows " + str(len(unaligned_set)))
 exit(0)
