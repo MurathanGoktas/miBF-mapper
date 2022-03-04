@@ -112,7 +112,6 @@ with open(simulated_reads) as file:
 
 flag_suppl_alignments(paf_df)
 
-
 false_set = set()
 true_set = set()
 unaligned_set = set()
@@ -125,4 +124,13 @@ for read_s in simulated_reads_set:
 print("True rows " + str(len(true_set)))
 print("False rows " + str(len(false_set)))
 print("Unaligned rows " + str(len(unaligned_set)))
+
+with open(paf_path+str(".unaligned"), 'w') as the_file:
+    for read_u in unaligned_set:
+        the_file.write(read_u+"\n")
+
+with open(paf_path+str(".false_aligned"), 'w') as the_file:
+    for read_f in false_set:
+        the_file.write(read_f+"\n")
+
 exit(0)
