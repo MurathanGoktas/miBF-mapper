@@ -54,6 +54,23 @@ vector<string> convertInputString(const string &inputString)
 	return currentString;
 }
 
+/*
+ * Parses input string into separate strings, returning a vector.
+ */
+vector<string> convertInputStringFromFile(const string &spacedSeedFile)
+{
+	std::ifstream infile(spacedSeedFile);
+
+	vector<string> currentString;
+	std::string str; 
+	while (std::getline(infile, str)) {
+		currentString.push_back(str);
+		std::cout << str << std::endl;
+	}
+	assert(currentString.size() > 0);
+	return currentString;
+}
+
 void printHelpDialog() {
 	static const char dialog[] =
 		"Usage: biobloommimaker -p [FILTERID] [OPTION]... [FILE]...\n"
@@ -143,7 +160,8 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 		case 'S': {
-			opt::sseeds = convertInputString(optarg);
+			opt::sseeds = convertInputStringFromFile(optarg);
+			//opt::sseeds = convertInputString(optarg);
 			opt::kmerSize = opt::sseeds[0].size();
 			break;
 		}
@@ -163,7 +181,7 @@ int main(int argc, char *argv[]) {
 		case 'e': {
 			stringstream convert(optarg);
 			if (!(convert >> opt::stepSize)) {
-				cerr << "Error - Invalid set of bloom filter parameters! k: "
+				cerr << "Error - Invalid set of bloom filter parameters! e: "
 						<< optarg << endl;
 				return 0;
 			}
