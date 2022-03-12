@@ -14,12 +14,15 @@
 #include <string>
 #include <stdint.h>
 
-#include "btl_bloomfilter/MIBloomFilter.hpp"
-#include "btl_bloomfilter/MIBFConstructSupport.hpp"
-#include "btl_bloomfilter/vendor/stHashIterator.hpp"
-#include "Common/sntHashIterator.hpp"
+//#include "btl_bloomfilter/MIBloomFilter.hpp"
+//#include "btl_bloomfilter/MIBFConstructSupport.hpp"
+#include "btllib/nthash.hpp"
+#include "btllib/mi_bloom_filter_constructor_support.hpp"
+#include "Utilities/mi_bf_nthash.hpp"
+//#include "btl_bloomfilter/vendor/stHashIterator.hpp"
+//#include "Common/sntHashIterator.hpp"
 
-#include "btl_bloomfilter/BloomFilter.hpp"
+//#include "btl_bloomfilter/BloomFilter.hpp"
 
 #include "Common/Options.h"
 
@@ -143,7 +146,7 @@ public:
 				opt::hashNum, occ, opt::sseeds);
 		vector<vector<unsigned> > ssVal;
 		if (!opt::sseeds.empty()) {
-			ssVal =	MIBloomFilter<ID>::parseSeedString(opt::sseeds);
+			ssVal =	btllib::parse_seeds(opt::sseeds);
 		}
 		generateBV(miBFCS, ssVal);
 
@@ -152,7 +155,7 @@ public:
 			time = omp_get_wtime();
 			cerr << "Populating values of miBF" << endl;
 		}
-		MIBloomFilter<ID> *miBF = miBFCS.getEmptyMIBF();
+		btllib::MIBloomFilter<ID> *miBF = miBFCS.getEmptyMIBF();
 
 		//record memory before
 		size_t memKB = getRSS();
@@ -314,10 +317,10 @@ public:
 		assert(posFile);
 		//---------------
 
-		cerr << "PopCount: " << miBF->getPop() << endl;
-		cerr << "PopSaturated: " << miBF->getPopSaturated() << endl;
+		cerr << "PopCount: " << miBF->get_pop() << endl;
+		cerr << "PopSaturated: " << miBF->get_pop_saturated() << endl;
 		cerr << "PopCount Ratio: "
-				<< double(miBF->getPop()) / double(miBF->size()) << endl;
+				<< double(miBF->get_pop()) / double(miBF->size()) << endl;
 		cerr << "Storing filter" << endl;
 
 		//save filter
@@ -325,7 +328,7 @@ public:
 
 		if(opt::verbose > 1){
 			vector<size_t> counts(m_ids.size(), 0);
-			miBF->getIDCounts(counts);
+			miBF->get_id_counts(counts);
 			size_t count = 0;
 			for(vector<size_t>::iterator itr = ++counts.begin(); itr != counts.end(); ++itr){
 				cout << ++count << "\t" << *itr << endl;
@@ -443,12 +446,24 @@ private:
 		}
 	}
 
-
 	template<typename H>
 	H hashIterator(const string &seq,
 			const vector<vector<unsigned> > &seedVal) {
 		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize, opt::stepSize);
 	}
+
+	/*
+	template <typename H>
+	H hashIterator(const string &seq,
+			const vector<vector<unsigned> > &seedVal) {
+		if (std::is_same<H, btllib::SeedNtHash>::value){
+			return btllib::SeedNtHash(seq, seedVal, 1, m_kmerSize); //opt_size deleted
+		} else{
+			return btllib::NtHash(seq, opt::hashNum, m_kmerSize); //opt_size deleted
+		}
+		
+	}
+	*/
 
 	inline void writeIDs(std::ofstream &file) const {
 		assert(file);
@@ -457,6 +472,7 @@ private:
 			assert(file);
 		}
 	}
+
 
 	//TODO move these functions to a common util class?
 	/*

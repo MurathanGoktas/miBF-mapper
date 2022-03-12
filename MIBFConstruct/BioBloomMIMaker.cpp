@@ -16,10 +16,13 @@
 #include <fstream>
 #include <omp.h>
 #include "MIBFGen.hpp"
-#include "btl_bloomfilter/vendor/stHashIterator.hpp"
+#include "btllib/nthash.hpp"
+#include "btllib/mi_bloom_filter_constructor_support.hpp"
+#include "Utilities/mi_bf_nthash.hpp"
+//#include "Utilities/stHashIterator.hpp"
 //#include "btl_bloomfilter/vendor/ntHashIterator.hpp"
-#include "Common/sntHashIterator.hpp"
-#include "../btl_bloomfilter/MIBFConstructSupport.hpp"
+//#include "Utilities/sntHashIterator.hpp"
+//#include "../btl_bloomfilter/MIBFConstructSupport.hpp"
 
 #include <stdio.h>
 #define STRINGIZE(x) #x
@@ -290,11 +293,11 @@ int main(int argc, char *argv[]) {
 
 	if (!opt::sseeds.empty()) {
 		MIBFGen filterGen(inputFiles, opt::kmerSize, opt::entryNum);
-		filterGen.generate<stHashIterator>(opt::prefix, opt::occupancy);
+		filterGen.generate<miBFSeedNtHash>(opt::prefix, opt::occupancy);
 	}
 	else{
 		MIBFGen filterGen(inputFiles, opt::kmerSize, opt::entryNum);
-		filterGen.generate<sntHashIterator>(opt::prefix, opt::occupancy);
+		filterGen.generate<miBFNtHash>(opt::prefix, opt::occupancy);
 	}
 
 	if (opt::verbose) {
