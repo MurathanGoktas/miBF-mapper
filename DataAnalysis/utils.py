@@ -8,7 +8,7 @@ import config
 import random
 
 class IDRepGraphDrawer:
-    ## Form and fill 3 necessary arrays for ID rep graph
+    ## Constructor
     ## Params:
     ##	id_rep_df : Representation by position Dataframe
     ##	mibf_id_df : Dataframe having miBF ID and real name of sequences
@@ -25,7 +25,7 @@ class IDRepGraphDrawer:
     def create_arrays_for_id_graph(self,target_contig_mibf_id,window_size,interval_start,interval_end):
 
         targeted_id_rep_df = self.id_rep_df.loc[(self.id_rep_df['contig_mibf_id'] == target_contig_mibf_id)
-                            & (self.id_rep_df['query_pos'] <= int(interval_end)) & (self.id_rep_df['query_pos'] >= int(interval_start))].sort_values(by=['query_pos'])
+                            & (self.id_rep_df['query_pos'] <= interval_end) & (self.id_rep_df['query_pos'] >= interval_start)].sort_values(by=['query_pos'])
         targeted_id_rep_df = targeted_id_rep_df.reset_index(drop=True)
 
         ## init variables
@@ -82,8 +82,8 @@ class IDRepGraphDrawer:
         for m in range(x_elem_count):
             for k in range(y_elem_count):
 
-                discard, region_query_name, region_start_pos, query_index, region_strand, region_head_length, region_middle_region_length, region_tail_length = contig_df.iloc[[contig_indexes_to_plotted_counter]].values[0]
-                region_length = region_head_length + region_middle_region_length + region_tail_length
+                discard, region_query_name, region_start_pos, query_index, region_strand, region_head_length, region_middle_length, region_tail_length = contig_df.iloc[[contig_indexes_to_plotted_counter]].values[0]
+                region_length = region_head_length + region_middle_length + region_tail_length
 
                 self.draw_subplot_line_graph_for_id_rep(
                     axs[m,k],
@@ -100,6 +100,11 @@ class IDRepGraphDrawer:
             break
         return (fig,axs)
 
+    ## Creates a figure and fills it with grid of plots
+    ## Params:
+    ## 	window_size : window size to calculate the moving average of id representations
+    ##  contig_df : regions to be drawn in as array in format (name, start, strand, length)
+    ## 	main_title : title for the main figure
     def create_figure_of_multiple_subplots(self,window_size,contig_df,main_title):
         
         fig, axs = self.draw_multiple_subplots_for_id_rep(config.ID_GRAPHS_CONFIG['FIGURE_GRID_Y_ELEMS'],
@@ -117,12 +122,19 @@ class IDRepGraphDrawer:
 
         fig.savefig("subplots_cids_" + "_rand_" + str(random.randrange(1,1000))+".png")
 
+    ## Sets the subplot title with relevant variable values
+    ## Params:
+    ##  target_contig_name : real name of the sequence to be drawn
+    ## 	target_contig_mibf_id : the mibf id of the sequence to be drawn
+    ## 	window_size : window size to calculate the moving average of id representations
+    ## 	interval_start : start position of the region to be analyzed
+    ## 	interval_end : end position of the region to be analyzed
     def get_subplot_title(self,target_contig_name,target_contig_mibf_id,window_size,interval_start,interval_end):
         return str(
             "MIBF id:" + str(target_contig_mibf_id) + 
             " real ID:" + str(target_contig_name) +
             " start:" + str(interval_start) + 
-            " length:" + str(int(interval_end) - int(interval_start))
+            " length:" + str(interval_end - interval_start)
         )
 
 class DataManipulationHelper:
@@ -151,6 +163,7 @@ class DataManipulationHelper:
                     read.mapq
                 ])
         return rows
+
     ## Gets a PAF mapping file and returns the array of the rows of PAF file
     ## Params:
     ##	SAM_file_path : SAM file
@@ -175,4 +188,18 @@ class DataManipulationHelper:
     def parse_nanosim_query_name(self,query_name):
         splitted = query_name.split("_")
         splitted[1] = splitted[1].split(";")[0]
-        return splitted ## true_ref_name, true_ref_start_pos, query_index, true_strand, head_length, middle_region_length, tail_length
+        return splitted ## true_ref_name, true_ref_start_pos, query_index, true_strand, head_length, middle_length, tail_length
+
+    def parse_nanosim_read_ids_to_df(self,df_param):
+        df_param['true_ref_name'], df_param['true_ref_start_pos'], df_param['query_index'], \
+        df_param['true_strand'], df_param['head_length'], df_param['middle_length'], \
+        df_param['tail_length']                                                             \
+        = zip(*df_param['query_name'].map(self.parse_nanosim_query_name))
+
+        df_param = df_param.astype({
+            'true_ref_start_pos': 'int32',
+            'head_length': 'int32', 
+            'middle_length': 'int32', 
+            'tail_length': 'int32'
+        })
+        return df_param
