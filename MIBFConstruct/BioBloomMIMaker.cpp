@@ -17,7 +17,7 @@
 #include <omp.h>
 #include "MIBFGen.hpp"
 #include "btllib/nthash.hpp"
-#include "btllib/mi_bloom_filter_constructor_support.hpp"
+#include "btllib/mi_bloom_filter_construct_support.hpp"
 #include "Utilities/mi_bf_nthash.hpp"
 //#include "Utilities/stHashIterator.hpp"
 //#include "btl_bloomfilter/vendor/ntHashIterator.hpp"
@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
 			NULL, 0, NULL, 0 } };
 
 	//actual checking step
+	std::cout << "here 10" << std::endl;
 	int option_index = 0;
 	while ((c = getopt_long(argc, argv, "p:ht:b:S:g:k:e:m:n:Fv",
 			long_options, &option_index)) != -1) {
@@ -289,8 +290,6 @@ int main(int argc, char *argv[]) {
 		cerr << "Please pick number of hash values (-g)\n";
 		exit(1);
 	}
-
-
 	if (!opt::sseeds.empty()) {
 		MIBFGen filterGen(inputFiles, opt::kmerSize, opt::entryNum);
 		filterGen.generate<miBFSeedNtHash>(opt::prefix, opt::occupancy);

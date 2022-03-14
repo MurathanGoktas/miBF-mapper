@@ -61,9 +61,11 @@ srcdir=$(cd $srcdir; pwd)
 GITCOMMIT=$(git log -1 --pretty='%h')
 AC_MSG_NOTICE([$GITCOMMIT])
 
+btllib_flags="-L $srcdir/btllib/lib"
+
 # Set compiler flags.
 AC_SUBST(CPPFLAGS,"-I$srcdir $boost_cppflags $sparsehash_cppflags $sdsl_cppflags $zlib_cppflags $CPPFLAGS -DGITCOMMIT=$GITCOMMIT ")
-AC_SUBST(LDFLAGS,"$sdsl_ldflags $zlib_ldflags $LDFLAGS")
+AC_SUBST(LDFLAGS,"$sdsl_ldflags $zlib_ldflags $LDFLAGS $btllib_flags")
 
 # Checks for header files.
 AC_LANG([C++])	#sets the auto conf to look for c++ headers
@@ -99,8 +101,15 @@ AC_CONFIG_FILES([
 		Makefile
 		Common/Makefile
 		MIBFConstruct/Makefile
-		MIBFPair/Makefile
 		MIBFAnalyze/Makefile
 ])
+
+##AC_CONFIG_FILES([
+##		Makefile
+##		Common/Makefile
+##		MIBFConstruct/Makefile
+##		MIBFPair/Makefile
+##		MIBFAnalyze/Makefile
+##])
 AC_OUTPUT
 

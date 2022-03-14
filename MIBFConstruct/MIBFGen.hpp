@@ -17,7 +17,7 @@
 //#include "btl_bloomfilter/MIBloomFilter.hpp"
 //#include "btl_bloomfilter/MIBFConstructSupport.hpp"
 #include "btllib/nthash.hpp"
-#include "btllib/mi_bloom_filter_constructor_support.hpp"
+#include "btllib/mi_bloom_filter_construct_support.hpp"
 #include "Utilities/mi_bf_nthash.hpp"
 //#include "btl_bloomfilter/vendor/stHashIterator.hpp"
 //#include "Common/sntHashIterator.hpp"
@@ -182,12 +182,12 @@ public:
 						name = m_fileNames[i].substr(
 								m_fileNames[i].find_last_of("/") + 1);
 					}
-					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
+
 					} else if (l < 0){
 						break;
 					}
