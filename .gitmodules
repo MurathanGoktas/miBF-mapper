@@ -4,3 +4,4 @@
 [submodule "btllib"]
 	path = btllib
 	url = https://github.com/bcgsc/btllib.git
+	branch = merge
