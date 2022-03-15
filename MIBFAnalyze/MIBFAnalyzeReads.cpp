@@ -5,9 +5,12 @@
 #include <set>
 #include <iostream>
 #include <cstdlib> //argparse
+#include <getopt.h>
 //#include <map>
-#include "btl_bloomfilter/vendor/stHashIterator.hpp"
-#include "btl_bloomfilter/vendor/ntHashIterator.hpp"
+//#include "btl_bloomfilter/vendor/stHashIterator.hpp"
+//#include "btl_bloomfilter/vendor/ntHashIterator.hpp"
+#include "Utilities/mi_bf_nthash.hpp"
+
 #include "config.h"
 
 #include <stdio.h>
@@ -133,28 +136,7 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 		// check if mapping is extending existing mapping region
 		// for reverse_strand contig_start_pos is contig _end pos
 		for(auto& region : regions){
-			if(region.contig_id == cur_struct.contig_id){
-			/*
-				if(cur_struct.contig_id == 22){
-					std::cout << "------------\n";
-					std::cout << "read_pos " << read_pos << std::endl;
-					std::cout << "regions.size() " << regions.size() << std::endl;
-					std::cout << "region.contig_id " << region.contig_id << std::endl;
-					std::cout << "region.reverse_strand " << region.reverse_strand << std::endl;
-					std::cout << "region.first_contig_pos " << region.first_contig_pos << std::endl; 
-					std::cout << "region.last_contig_pos " << region.last_contig_pos << std::endl; 
-					std::cout << "region.first_read_pos " << region.first_read_pos << std::endl; 
-					std::cout << "region.last_read_pos " << region.last_read_pos << std::endl << std::endl;
-					
-					std::cout << "cur_struct.contig_id " << cur_struct.contig_id << std::endl;
-					std::cout << "cur_struct.contig_start_pos " << cur_struct.contig_start_pos << std::endl;
-					std::cout << "cur_struct.reverse_strand " << cur_struct.reverse_strand << std::endl;
-					std::cout << "cur_struct.unsat_hits " << cur_struct.unsat_hits << std::endl;
-					std::cout << "cur_struct.sat_hits " << cur_struct.sat_hits << std::endl;
-					std::cout << "------------\n";
-				}
-				*/
-				
+			if(region.contig_id == cur_struct.contig_id){				
 				if(cur_struct.reverse_strand == region.reverse_strand){
 					//std::cout << "here a" << std::endl;
 					if(cur_struct.contig_start_pos - region.last_contig_pos < max_space_between_hits){
@@ -303,47 +285,13 @@ void consolidate_mapped_regions(vector<MappedRegion>& regions){
 	}
 }
 
-int main(int argc, char** argv) {
-	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
-	// read arguments --------
-	if(argc != 10){
-		std::cerr << " Usage:\n [miBF path + prefix] [reads to query] [base name for output] " <<
-		"[max_space_between_hits] [least_unsat_hit_to_start_region] [least_hit_in_region] " <<
-		"[least_hit_count_report] [max_shift_in_region] [step_size]\n";
-		return -1;
-	}
-	std::string mibf_path =  argv[1];
-	std::string read_set_path = argv[2];
-	std::string base_name = argv[3];
-	int max_space_between_hits = atoi(argv[4]);
-	int least_unsat_hit_to_start_region = atoi(argv[5]);
-	int least_hit_in_region = atoi(argv[6]);
-	int least_hit_count_report = atoi(argv[7]);
-	int max_shift_in_region = atoi(argv[8]);
-	unsigned step_size = atoi(argv[9]); 
-
-	// read arguments --------
-	// create miBF
-	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
-	
-	// declare data obejct
-	//unsigned contig_count;
-	map<unsigned,unsigned> m_pos;
-	vector<string> m_name;
-	vector<unsigned> m_id;
-	map<unsigned,unsigned> m_length;
-	map<unsigned,std::string> m_name_vec;
-
-	/// report variables declared --------
-	unsigned processed_read_count = 0;
-
+void read_vectors(std::string& filename, map<unsigned,unsigned>& m_pos, vector<string>& m_name,
+	vector<unsigned>& m_id, map<unsigned,unsigned>& m_length, map<unsigned,std::string>& m_name_vec){
 	ifstream idfile;
     	string word;
 	vector<string> words;
-	// filename of the file
-    	string filename = mibf_path + "_id_file.txt";
-  
-    	// opening file
+
+	// opening file
     	idfile.open(filename.c_str());
 
 	while (idfile >> word) {
@@ -377,44 +325,157 @@ int main(int argc, char** argv) {
 		}
 	}
 	idfile.close();
+}
+
+int main(int argc, char** argv) {
+	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
+
+	//switch statement variable
+	int c;
+
+	std::string mibf_path = "",  read_set_path = "",  base_name = "";
+	int max_space_between_hits = 100, least_unsat_hit_to_start_region = 2, least_hit_in_region = 2;
+	int least_hit_count_report = 50, max_shift_in_region = 100, step_size = 1; 
+
+	//long form arguments
+	static struct option long_options[] = {
+		{
+			"mi_bf_prefix", required_argument, NULL, 'm' }, {
+			"reads_path", required_argument, NULL, 'r' }, {
+			"output", required_argument, NULL, 'o' }, {
+			"max_space_between_hits", required_argument, NULL, 'a' }, {
+			"least_unsat_hit_to_start_region", required_argument, NULL, 'b' }, {
+			"least_hit_in_region", required_argument, NULL, 'c' }, {
+			"least_hit_count_report", required_argument, NULL, 'd' }, {
+			"max_shift_in_region", required_argument, NULL, 'e' }, {
+			"step_size", required_argument, NULL, 'f' }, {
+			NULL, 0, NULL, 0 } };
+
+	//actual checking step
+	std::cout << "here 10" << std::endl;
+	int option_index = 0;
+	while ((c = getopt_long(argc, argv, "m:r:o:a:b:c:d:e:f:v",
+			long_options, &option_index)) != -1) {
+		switch (c) {
+		case 'm': {
+			mibf_path = optarg;
+			break;
+		}
+		case 'r': {
+			read_set_path = optarg;
+			break;
+		}
+		case 'o': {
+			base_name = optarg;
+			break;
+		}
+		case 'a': {
+			stringstream convert(optarg);
+			if (!(convert >> max_space_between_hits)) {
+				cerr << "Error - Invalid parameter! a: " << optarg << endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 'b': {
+			stringstream convert(optarg);
+			if (!(convert >> least_unsat_hit_to_start_region)) {
+				cerr << "Error - Invalid parameter! b: " << optarg << endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 'c': {
+			stringstream convert(optarg);
+			if (!(convert >> least_hit_in_region)) {
+				cerr << "Error - Invalid parameter! c: " << optarg << endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 'd': {
+			stringstream convert(optarg);
+			if (!(convert >> least_hit_count_report)) {
+				cerr << "Error - Invalid parameter! d: " << optarg << endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 'e': {
+			stringstream convert(optarg);
+			if (!(convert >> max_shift_in_region)) {
+				cerr << "Error - Invalid parameter! e: " << optarg << endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		case 'f': {
+			stringstream convert(optarg);
+			if (!(convert >> step_size)) {
+				cerr << "Error - Invalid parameter! f: " << optarg << endl;
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+		default: {
+			break;
+		}
+		}
+	}
+
+	// read arguments --------
+	// create miBF
+	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
+
+	/// report variables declared --------
+	unsigned processed_read_count = 0;
+	
+	// declare data obejct
+	map<unsigned,unsigned> m_pos;
+	vector<string> m_name;
+	vector<unsigned> m_id;
+	map<unsigned,unsigned> m_length;
+	map<unsigned,std::string> m_name_vec;
+
+	string filename = mibf_path + "_id_file.txt";
+	read_vectors(filename, m_pos, m_name, m_id, m_length, m_name_vec);
 
 	//reusable objects
 	vector<uint64_t> m_rank_pos_1(m_filter.get_hash_num());
 	vector<ID> m_data_1(m_filter.get_hash_num());
 
-	uint unsaturated_rep_id = 0;
-	uint saturated_rep_id = 0;
-	uint saturated_no_rep_id = 0;
-
-	unsigned start_dist_1;
-	unsigned end_dist_1;
-	unsigned c_1;
-
+	uint unsaturated_rep_id = 0, saturated_rep_id = 0, saturated_no_rep_id = 0;
 	uint contig_id;
-	bool reverse_strand = false;
-	bool saturated = false;
+
+	unsigned start_dist_1, end_dist_1, c_1;
+
+	bool reverse_strand = false, saturated = false;
 
 	vector<ContigHitsStruct> hits_vec;
 	hits_vec.reserve(m_filter.get_hash_num());
+
 	vector<MappedRegion> regions;
 	unsigned filter_counter = 0;
 
 	// read_name	mibf_id		start_pos	length
 	ofstream read_hit_by_pos_file;
 	read_hit_by_pos_file.open(mibf_path + "_" + base_name + "_read_hit_by_pos.tsv");
+
 	ofstream mapped_regions_file;
 	mapped_regions_file.open(mibf_path + "_" + base_name + ".paf");
-	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK;
 
 	int residue_length = m_filter.get_kmer_size();
+
+	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK;
 
 	btllib::SeqReader reader(read_set_path, 8, 1); // long flag
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
 		if (!(m_filter.get_seed_values().size() > 0)) {
-			ntHashIterator itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size(), step_size);
 
-			while(itr1 != itr1.end()){
-				if(m_filter.at_rank(*itr1,m_rank_pos_1)){ // a bit-vector hit
+			miBFNtHash itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
+
+			do{
+				if(m_filter.at_rank(itr1.hashes(),m_rank_pos_1)){ // a bit-vector hit
 					m_data_1 = m_filter.get_data(m_rank_pos_1);
 
 					//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
@@ -425,31 +486,32 @@ int main(int argc, char** argv) {
 							std::cout << "ERROR!!" << std::endl;
 						}
 						// determine if read hits the contig in miBf in forward or reverse orientation
-						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.get_strand());
+						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.forward());
 						//determine saturation bit
 						saturated = bool(m_data_1[m] > m_filter.MASK);
 
 						add_hit_to_vec(hits_vec, c_1, start_dist_1, end_dist_1, reverse_strand, saturated);
 					}
-					track_mapping_regions(regions,hits_vec, record.id, itr1.pos(),
+					track_mapping_regions(regions,hits_vec, record.id, itr1.get_pos(),
 							max_space_between_hits, least_hit_in_region, least_unsat_hit_to_start_region,
 							max_shift_in_region);
 					hits_vec.clear();
 					if(filter_counter % 250 == 0){
-						filter_regions_on_the_fly(regions, itr1.pos());
+						filter_regions_on_the_fly(regions, itr1.get_pos());
 					}
 					++filter_counter;
 				}
-				++itr1;
-			}
+				//++itr1;
+
+			} while (itr1.roll());
 			consolidate_mapped_regions(regions);
 			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
 			regions.clear();
 		} else {
-			stHashIterator itr1(record.seq,m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size(), step_size);
+			miBFSeedNtHash itr1(record.seq,m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size());
 
-			while(itr1 != itr1.end()){
-				if(m_filter.at_rank(*itr1,m_rank_pos_1)){ // a bit-vector hit
+			do{
+				if(m_filter.at_rank(itr1.hashes(),m_rank_pos_1)){ // a bit-vector hit
 					m_data_1 = m_filter.get_data(m_rank_pos_1);
 
 					//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
@@ -458,25 +520,25 @@ int main(int argc, char** argv) {
 						c_1 = getEdgeDistances(m_pos,m_length,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
 
 						// determine if read hits the contig in miBf in forward or reverse orientation
-						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.get_strand());
+						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.forward());
 						//determine saturation bit
 						saturated = bool(m_data_1[m] > m_filter.MASK);
 
 						add_hit_to_vec(hits_vec, c_1, start_dist_1, end_dist_1, reverse_strand, saturated);
 					}
-					track_mapping_regions(regions,hits_vec, record.id, itr1.pos(),
+					track_mapping_regions(regions,hits_vec, record.id, itr1.get_pos(),
 							max_space_between_hits, least_hit_in_region, least_unsat_hit_to_start_region,
 							max_shift_in_region);
 					hits_vec.clear();
 					
 					if(filter_counter % 250 == 0){
-						filter_regions_on_the_fly(regions, itr1.pos());
+						filter_regions_on_the_fly(regions, itr1.get_pos());
 					}
 					++filter_counter;
 					
 				}
-				++itr1;
-			}
+				//++itr1;
+			} while(itr1.roll());
 			consolidate_mapped_regions(regions);
 			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
 			regions.clear();
