@@ -30,6 +30,26 @@ const uint step_size = 1;
 
 using namespace std;
 
+struct MapSingleReadParameters{
+	MapSingleReadParameters(ofstream& mapped_regions_file):
+		output_paf_file(mapped_regions_file)
+	{}
+	ofstream& output_paf_file;
+
+	vector<string> name_vec;
+	vector<unsigned> id_vec;
+	map<unsigned,unsigned> pos_vec;
+	map<unsigned,unsigned> length_map;
+	map<unsigned,std::string> name_map;
+
+	int max_space_between_hits = 100; 
+	int least_unsat_hit_to_start_region = 2; 
+	int least_hit_in_region = 2;
+	int least_hit_count_report = 50; 
+	int max_shift_in_region = 100; 
+	int step_size = 1;
+};
+
 unsigned findContigBS(map<unsigned,unsigned> &m_pos, unsigned first, unsigned last, unsigned search_pos){
 	unsigned middle;
 	if(last >= first)
@@ -184,7 +204,7 @@ void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions,
 						ofstream& mapped_regions_file,
 						map<unsigned,unsigned>& m_length,
 						int& least_hit_count_report,
-						int& residue_length,
+						int residue_length,
 						map<unsigned,std::string>& m_name_vec){
 	for(auto& region : regions){
 		if(
@@ -285,7 +305,7 @@ void consolidate_mapped_regions(vector<MappedRegion>& regions){
 	}
 }
 
-void read_vectors(std::string& filename, map<unsigned,unsigned>& m_pos, vector<string>& m_name,
+void read_vectors(std::string filename, map<unsigned,unsigned>& m_pos, vector<string>& m_name,
 	vector<unsigned>& m_id, map<unsigned,unsigned>& m_length, map<unsigned,std::string>& m_name_vec){
 	ifstream idfile;
     	string word;
@@ -326,13 +346,64 @@ void read_vectors(std::string& filename, map<unsigned,unsigned>& m_pos, vector<s
 	}
 	idfile.close();
 }
+template<typename H>
+bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, MapSingleReadParameters &params){
+	
+	H itr1(record.seq, mi_bf.get_seed_values(), mi_bf.get_hash_num(),1, mi_bf.get_kmer_size());
+	unsigned FULL_ANTI_MASK = mi_bf.ANTI_STRAND & mi_bf.ANTI_MASK;
+	
+	//reusable objects
+	vector<uint64_t> m_rank_pos_1(mi_bf.get_hash_num());
+	vector<ID> m_data_1(mi_bf.get_hash_num());
+	unsigned start_dist_1, end_dist_1, c_1;
 
+	vector<ContigHitsStruct> hits_vec;
+	hits_vec.reserve(mi_bf.get_hash_num());
+
+	vector<MappedRegion> regions;
+
+	bool reverse_strand = false, saturated = false;
+	unsigned filter_counter = 0;
+
+	do{
+		if(mi_bf.at_rank(itr1.hashes(),m_rank_pos_1)){ // a bit-vector hit
+			m_data_1 = mi_bf.get_data(m_rank_pos_1);
+
+			//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
+			for(unsigned m = 0; m < mi_bf.get_hash_num(); m++){
+				// get contig id by pos
+				c_1 = getEdgeDistances(params.pos_vec, params.length_map, m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
+				if(c_1 == -1){
+					std::cout << "ERROR!!" << std::endl;
+				}
+				// determine if read hits the contig in miBf in forward or reverse orientation
+				reverse_strand = bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward());
+				//determine saturation bit
+				saturated = bool(m_data_1[m] > mi_bf.MASK);
+
+				add_hit_to_vec(hits_vec, c_1, start_dist_1, end_dist_1, reverse_strand, saturated);
+			}
+			track_mapping_regions(regions,hits_vec, record.id, itr1.get_pos(),
+					params.max_space_between_hits, params.least_hit_in_region, params.least_unsat_hit_to_start_region,
+					params.max_shift_in_region);
+			hits_vec.clear();
+			if(filter_counter % 250 == 0){
+				filter_regions_on_the_fly(regions, itr1.get_pos());
+			}
+			++filter_counter;
+		}
+	} while (itr1.roll());
+	consolidate_mapped_regions(regions);
+	//int residue_length = params.mi_bf.get_kmer_size();
+	print_regions_for_read_in_paf_format(regions,record,params.output_paf_file,params.length_map,params.least_hit_count_report,mi_bf.get_kmer_size(),params.name_map);
+	regions.clear();
+}
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 
 	//switch statement variable
 	int c;
-
+	
 	std::string mibf_path = "",  read_set_path = "",  base_name = "";
 	int max_space_between_hits = 100, least_unsat_hit_to_start_region = 2, least_hit_in_region = 2;
 	int least_hit_count_report = 50, max_shift_in_region = 100, step_size = 1; 
@@ -352,7 +423,6 @@ int main(int argc, char** argv) {
 			NULL, 0, NULL, 0 } };
 
 	//actual checking step
-	std::cout << "here 10" << std::endl;
 	int option_index = 0;
 	while ((c = getopt_long(argc, argv, "m:r:o:a:b:c:d:e:f:v",
 			long_options, &option_index)) != -1) {
@@ -422,129 +492,38 @@ int main(int argc, char** argv) {
 		}
 		}
 	}
+	// output PAF file
+	ofstream output_file;
+	output_file.open(mibf_path + "_" + base_name + ".paf");
 
-	// read arguments --------
-	// create miBF
-	btllib::MIBloomFilter<ID> m_filter = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
-
-	/// report variables declared --------
-	unsigned processed_read_count = 0;
+	// Create params bundle object	
+	MapSingleReadParameters params_bundle(output_file);
+	params_bundle.set_max_space_between_hits(max_space_between_hits);
+	params_bundle.set_least_unsat_hit_to_start_region(least_unsat_hit_to_start_region);
+	params_bundle.set_least_hit_in_region(least_hit_in_region);
+	params_bundle.set_least_hit_count_report(least_hit_count_report);
+	params_bundle.set_max_shift_in_region(max_shift_in_region);
+	params_bundle.set_step_size(step_size);
 	
-	// declare data obejct
-	map<unsigned,unsigned> m_pos;
-	vector<string> m_name;
-	vector<unsigned> m_id;
-	map<unsigned,unsigned> m_length;
-	map<unsigned,std::string> m_name_vec;
+	// read miBF
+	btllib::MIBloomFilter<ID> mi_bf = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
 
-	string filename = mibf_path + "_id_file.txt";
-	read_vectors(filename, m_pos, m_name, m_id, m_length, m_name_vec);
+	// read supplementary files
+	read_vectors(mibf_path + "_id_file.txt", params_bundle.pos_vec, params_bundle.name_vec, params_bundle.id_vec, params_bundle.length_map, params_bundle.name_map);
+	
+	const bool SPACED_SEED_BF = mi_bf.get_seed_values().size() > 0; 
 
-	//reusable objects
-	vector<uint64_t> m_rank_pos_1(m_filter.get_hash_num());
-	vector<ID> m_data_1(m_filter.get_hash_num());
-
-	uint unsaturated_rep_id = 0, saturated_rep_id = 0, saturated_no_rep_id = 0;
-	uint contig_id;
-
-	unsigned start_dist_1, end_dist_1, c_1;
-
-	bool reverse_strand = false, saturated = false;
-
-	vector<ContigHitsStruct> hits_vec;
-	hits_vec.reserve(m_filter.get_hash_num());
-
-	vector<MappedRegion> regions;
-	unsigned filter_counter = 0;
-
-	// read_name	mibf_id		start_pos	length
-	ofstream read_hit_by_pos_file;
-	read_hit_by_pos_file.open(mibf_path + "_" + base_name + "_read_hit_by_pos.tsv");
-
-	ofstream mapped_regions_file;
-	mapped_regions_file.open(mibf_path + "_" + base_name + ".paf");
-
-	int residue_length = m_filter.get_kmer_size();
-
-	unsigned FULL_ANTI_MASK = m_filter.ANTI_STRAND & m_filter.ANTI_MASK;
-
+	unsigned processed_read_count = 0;
 	btllib::SeqReader reader(read_set_path, 8, 1); // long flag
+
 	for (btllib::SeqReader::Record record; (record = reader.read());) {
-		if (!(m_filter.get_seed_values().size() > 0)) {
-
-			miBFNtHash itr1(record.seq,m_filter.get_hash_num(),m_filter.get_kmer_size());
-
-			do{
-				if(m_filter.at_rank(itr1.hashes(),m_rank_pos_1)){ // a bit-vector hit
-					m_data_1 = m_filter.get_data(m_rank_pos_1);
-
-					//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
-					for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
-						// get contig id by pos
-						c_1 = getEdgeDistances(m_pos,m_length,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
-						if(c_1 == -1){
-							std::cout << "ERROR!!" << std::endl;
-						}
-						// determine if read hits the contig in miBf in forward or reverse orientation
-						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.forward());
-						//determine saturation bit
-						saturated = bool(m_data_1[m] > m_filter.MASK);
-
-						add_hit_to_vec(hits_vec, c_1, start_dist_1, end_dist_1, reverse_strand, saturated);
-					}
-					track_mapping_regions(regions,hits_vec, record.id, itr1.get_pos(),
-							max_space_between_hits, least_hit_in_region, least_unsat_hit_to_start_region,
-							max_shift_in_region);
-					hits_vec.clear();
-					if(filter_counter % 250 == 0){
-						filter_regions_on_the_fly(regions, itr1.get_pos());
-					}
-					++filter_counter;
-				}
-				//++itr1;
-
-			} while (itr1.roll());
-			consolidate_mapped_regions(regions);
-			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
-			regions.clear();
+		if (!(SPACED_SEED_BF)) {
+			map_single_read<miBFNtHash>(record, mi_bf, params_bundle);
 		} else {
-			miBFSeedNtHash itr1(record.seq,m_filter.get_seed_values(),m_filter.get_hash_num(),1,m_filter.get_kmer_size());
-
-			do{
-				if(m_filter.at_rank(itr1.hashes(),m_rank_pos_1)){ // a bit-vector hit
-					m_data_1 = m_filter.get_data(m_rank_pos_1);
-
-					//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
-					for(unsigned m = 0; m < m_filter.get_hash_num(); m++){
-						// get contig id by pos
-						c_1 = getEdgeDistances(m_pos,m_length,m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
-
-						// determine if read hits the contig in miBf in forward or reverse orientation
-						reverse_strand = bool(!((m_data_1[m] & m_filter.ANTI_MASK) > m_filter.STRAND) == itr1.forward());
-						//determine saturation bit
-						saturated = bool(m_data_1[m] > m_filter.MASK);
-
-						add_hit_to_vec(hits_vec, c_1, start_dist_1, end_dist_1, reverse_strand, saturated);
-					}
-					track_mapping_regions(regions,hits_vec, record.id, itr1.get_pos(),
-							max_space_between_hits, least_hit_in_region, least_unsat_hit_to_start_region,
-							max_shift_in_region);
-					hits_vec.clear();
-					
-					if(filter_counter % 250 == 0){
-						filter_regions_on_the_fly(regions, itr1.get_pos());
-					}
-					++filter_counter;
-					
-				}
-				//++itr1;
-			} while(itr1.roll());
-			consolidate_mapped_regions(regions);
-			print_regions_for_read_in_paf_format(regions,record,mapped_regions_file,m_length,least_hit_count_report,residue_length,m_name_vec);
-			regions.clear();
+			map_single_read<miBFSeedNtHash>(record, mi_bf, params_bundle);
 		}
+		++processed_read_count;
 	}
-	read_hit_by_pos_file.close();
 	mapped_regions_file.close();
 	return 0;
 }
