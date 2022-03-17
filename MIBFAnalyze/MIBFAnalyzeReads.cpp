@@ -144,6 +144,37 @@ struct ContigHitsStruct{
 	unsigned sat_hits;
 };
 
+struct HitStruct{
+	HitStruct(){}
+
+	HitStruct(
+		unsigned mi_bf_pos,
+		unsigned read_pos,
+		bool reverse_strand,
+		bool unsaturated
+		):	mi_bf_pos(mi_bf_pos),
+			read_pos(read_pos),
+			reverse_strand(reverse_strand),
+			unsaturated(unsaturated) {}
+
+	unsigned mi_bf_pos;
+	unsigned read_pos;
+	bool reverse_strand;
+	bool unsaturated = false;
+
+	unsigned ref_id;
+	unsigned ref_pos;
+/*
+	bool operator<(const HitStruct hit2)
+	{
+		return	mi_bf_pos == hit2.mi_bf_pos ?
+				read_pos == hit2.read_pos ? 
+					read_pos < hit2.read_pos 
+				: !unsaturated
+			: mi_bf_pos < hit2.mi_bf_pos;
+	}*/
+};
+
 void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStruct>& hits_vec, 
 				std::string& record_id, unsigned read_pos,
 				int& max_space_between_hits, int& least_hit_in_region,
@@ -333,11 +364,9 @@ void read_vectors(std::string filename, map<unsigned,unsigned>& m_pos, vector<st
 				m_name_vec.insert(pair<unsigned,std::string>(m_id.back(),m_name.back()));
 				break;
 			case 2:
-				std::cout << "m_id: " << m_id.back() << " m_pos: " << words[cc] << std::endl;
 				m_pos.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
 				break;
 			case 3:
-				std::cout << "m_id: " << m_id.back() << " m_length: " << words[cc] << std::endl;
 				m_length.insert(pair<unsigned, unsigned>(m_id.back(), std::stoi(words[cc])));
 				break;
 			default:
@@ -346,8 +375,61 @@ void read_vectors(std::string filename, map<unsigned,unsigned>& m_pos, vector<st
 	}
 	idfile.close();
 }
+size_t find_reference_id_bs_helper(map<unsigned,unsigned> &m_pos, int first, int last, int search_pos){
+	int middle;
+	if(last >= first)
+	{
+		if(first + 1 == last){
+			return search_pos < m_pos[last] ? first : last;
+		}
+		middle = (first + last)/2;
+		if(search_pos == m_pos[first]){
+			return first;
+		}
+		if(m_pos[middle] < search_pos){
+			return find_reference_id_bs_helper(m_pos,middle,last,search_pos);
+		}
+		//Checking if the search element is present in lower half
+		else{
+			return find_reference_id_bs_helper(m_pos,first,middle,search_pos);
+		}
+	}
+	return -1;
+}
+
+bool find_reference_id_bs(const int& search_pos, size_t& cur_ref_id, size_t& cur_ref_mi_bf_start, size_t& cur_ref_mi_bf_end, MapSingleReadParameters &params){
+	cur_ref_id = findContigBS(params.pos_vec, 1, params.pos_vec.end()->first, search_pos);
+	cur_ref_mi_bf_start = params.pos_vec[cur_ref_id];
+	cur_ref_mi_bf_end =  params.pos_vec[cur_ref_id] + params.length_map[cur_ref_id];
+}
+void assign_reference_info(vector<HitStruct>& all_hits, MapSingleReadParameters &params){
+
+	size_t cur_ref_id = -1, cur_ref_mi_bf_start = -1, cur_ref_mi_bf_end = -1;
+	for (auto it = begin (all_hits); it != end (all_hits); ++it) {
+		if(it->mi_bf_pos > cur_ref_mi_bf_start && it->mi_bf_pos < cur_ref_mi_bf_end){
+			it->ref_id = cur_ref_id;
+		} else{
+			find_reference_id_bs(it->mi_bf_pos, cur_ref_id, cur_ref_mi_bf_start, cur_ref_mi_bf_end, params);
+			it->ref_id = cur_ref_id;
+		}
+	}
+}
+void group_by_ref_id_sort_by_read_pos(vector<HitStruct>& all_hits){
+	auto last_it = all_hits.begin();
+	size_t last_ref_id = all_hits.begin()->ref_id;
+	for (auto it = begin (all_hits); it != end (all_hits); ++it) {
+		if(it->ref_id != last_ref_id - 1){
+			std::sort(last_it, it,
+				[](const HitStruct& p1, const HitStruct& p2){ 
+					return p1.read_pos < p2.read_pos;});
+		}
+		last_it = it;
+	}
+
+}
 template<typename H>
-bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, MapSingleReadParameters &params){
+bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, 
+			MapSingleReadParameters &params){
 	
 	H itr1(record.seq, mi_bf.get_seed_values(), mi_bf.get_hash_num(),1, mi_bf.get_kmer_size());
 	unsigned FULL_ANTI_MASK = mi_bf.ANTI_STRAND & mi_bf.ANTI_MASK;
@@ -356,7 +438,6 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	vector<uint64_t> m_rank_pos_1(mi_bf.get_hash_num());
 	vector<ID> m_data_1(mi_bf.get_hash_num());
 	unsigned start_dist_1, end_dist_1, c_1;
-
 	vector<ContigHitsStruct> hits_vec;
 	hits_vec.reserve(mi_bf.get_hash_num());
 
@@ -365,38 +446,36 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	bool reverse_strand = false, saturated = false;
 	unsigned filter_counter = 0;
 
+	vector<HitStruct> all_hits;
+	all_hits.reserve(10000);
+
 	do{
 		if(mi_bf.at_rank(itr1.hashes(),m_rank_pos_1)){ // a bit-vector hit
 			m_data_1 = mi_bf.get_data(m_rank_pos_1);
 
-			//unsigned cur_true_pos = itr1.pos() + m_pos[contig_id];
 			for(unsigned m = 0; m < mi_bf.get_hash_num(); m++){
-				// get contig id by pos
-				c_1 = getEdgeDistances(params.pos_vec, params.length_map, m_data_1[m] & FULL_ANTI_MASK,start_dist_1,end_dist_1); // empty the strand bucket
-				if(c_1 == -1){
-					std::cout << "ERROR!!" << std::endl;
-				}
-				// determine if read hits the contig in miBf in forward or reverse orientation
-				reverse_strand = bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward());
-				//determine saturation bit
-				saturated = bool(m_data_1[m] > mi_bf.MASK);
+				all_hits.push_back(
+					HitStruct(
+						m_data_1[m] & FULL_ANTI_MASK,
+						itr1.get_pos(),
+						bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward()),
+						bool(!(m_data_1[m] > mi_bf.MASK))
+					)
+				);
+			}
 
-				add_hit_to_vec(hits_vec, c_1, start_dist_1, end_dist_1, reverse_strand, saturated);
-			}
-			track_mapping_regions(regions,hits_vec, record.id, itr1.get_pos(),
-					params.max_space_between_hits, params.least_hit_in_region, params.least_unsat_hit_to_start_region,
-					params.max_shift_in_region);
-			hits_vec.clear();
-			if(filter_counter % 250 == 0){
-				filter_regions_on_the_fly(regions, itr1.get_pos());
-			}
-			++filter_counter;
 		}
 	} while (itr1.roll());
-	consolidate_mapped_regions(regions);
-	//int residue_length = params.mi_bf.get_kmer_size();
-	print_regions_for_read_in_paf_format(regions,record,params.output_paf_file,params.length_map,params.least_hit_count_report,mi_bf.get_kmer_size(),params.name_map);
-	regions.clear();
+
+	/* Sort according to miBF position. This assures optimal reference id assignment time performance */
+	std::sort(all_hits.begin(), all_hits.end(),
+		[](const HitStruct& p1, const HitStruct& p2){ 
+				return p1.mi_bf_pos < p2.mi_bf_pos;});
+
+	assign_reference_info(all_hits, params);
+
+	/* Group according to reference id and sort the group by read position */
+	group_by_ref_id_sort_by_read_pos(all_hits);
 }
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
@@ -498,12 +577,12 @@ int main(int argc, char** argv) {
 
 	// Create params bundle object	
 	MapSingleReadParameters params_bundle(output_file);
-	params_bundle.set_max_space_between_hits(max_space_between_hits);
-	params_bundle.set_least_unsat_hit_to_start_region(least_unsat_hit_to_start_region);
-	params_bundle.set_least_hit_in_region(least_hit_in_region);
-	params_bundle.set_least_hit_count_report(least_hit_count_report);
-	params_bundle.set_max_shift_in_region(max_shift_in_region);
-	params_bundle.set_step_size(step_size);
+	params_bundle.max_space_between_hits = max_space_between_hits;
+	params_bundle.least_unsat_hit_to_start_region = least_unsat_hit_to_start_region;
+	params_bundle.least_hit_in_region = least_hit_in_region;
+	params_bundle.least_hit_count_report = least_hit_count_report;
+	params_bundle.max_shift_in_region = max_shift_in_region;
+	params_bundle.step_size = step_size;
 	
 	// read miBF
 	btllib::MIBloomFilter<ID> mi_bf = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
@@ -523,7 +602,11 @@ int main(int argc, char** argv) {
 			map_single_read<miBFSeedNtHash>(record, mi_bf, params_bundle);
 		}
 		++processed_read_count;
+		if(processed_read_count % 100 == 0){
+			std::cout << "processed_read_count: " << processed_read_count << std::endl;
+		}
 	}
-	mapped_regions_file.close();
+	output_file << "asd";
+	output_file.close();
 	return 0;
 }
