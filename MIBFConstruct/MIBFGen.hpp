@@ -155,7 +155,7 @@ public:
 			time = omp_get_wtime();
 			cerr << "Populating values of miBF" << endl;
 		}
-		btllib::MIBloomFilter<ID> *miBF = miBFCS.getEmptyMIBF();
+		btllib::MIBloomFilter<ID> *miBF = miBFCS.get_empty_mi_bf();
 
 		//record memory before
 		size_t memKB = getRSS();
@@ -186,7 +186,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
 
 					} else if (l < 0){
 						break;
@@ -227,7 +227,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
 					}
@@ -255,7 +255,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
 					}
@@ -289,7 +289,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
 					}
@@ -355,7 +355,7 @@ private:
 	void generateBV(MIBFConstructSupport<ID, H> &miBFCS,
 			const vector<vector<unsigned>> &ssVal) {
 		if (opt::verbose > 0)
-			cerr << "Bit vector Size: " << miBFCS.getFilterSize() << endl;
+			cerr << "Bit vector Size: " << miBFCS.get_filter_size() << endl;
 
 		size_t uniqueCounts = 0;
 		if (opt::verbose > 0)
@@ -386,7 +386,7 @@ private:
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
-							colliCounts += miBFCS.insertBVColli(itr);
+							colliCounts += miBFCS.insert_bv_colli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
 					} else if (l < 0){
@@ -427,7 +427,7 @@ private:
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
-							colliCounts += miBFCS.insertBVColli(itr);
+							colliCounts += miBFCS.insert_bv_colli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
 					} else if (l < 0){
