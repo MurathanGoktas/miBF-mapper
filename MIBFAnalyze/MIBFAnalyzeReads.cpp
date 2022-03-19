@@ -50,36 +50,6 @@ struct MapSingleReadParameters{
 	int step_size = 1;
 };
 
-unsigned findContigBS(map<unsigned,unsigned> &m_pos, unsigned first, unsigned last, unsigned search_pos){
-	unsigned middle;
-	if(last >= first)
-	{
-		if(first + 1 == last){
-			return search_pos < m_pos[last] ? first : last;
-		}
-		middle = (first + last)/2;
-		if(search_pos == m_pos[first]){
-			return first;
-		}
-		if(m_pos[middle] < search_pos){
-			return findContigBS(m_pos,middle,last,search_pos);
-		}
-		//Checking if the search element is present in lower half
-		else{
-			return findContigBS(m_pos,first,middle,search_pos);
-		}
-	}
-	return -1;
-}
-
-unsigned getEdgeDistances(map<unsigned,unsigned> &m_pos, map<unsigned,unsigned> &m_length,unsigned search_pos, unsigned &start_dist, unsigned &end_dist){
-	unsigned contig_id;
-	contig_id = findContigBS(m_pos, 1, m_pos.end()->first, search_pos);
-	start_dist = search_pos - m_pos[contig_id];
-	end_dist =  m_pos[contig_id] + m_length[contig_id] - search_pos;
-	return contig_id;
-}
-
 struct MappedRegion{
 	MappedRegion(){}
 
@@ -122,28 +92,6 @@ struct MappedRegion{
 	}
 };
 
-struct ContigHitsStruct{
-	ContigHitsStruct(){}
-
-	ContigHitsStruct(
-		unsigned contig_id,
-		unsigned contig_start_pos,
-		bool reverse_strand,
-		unsigned unsat_hits,
-		unsigned sat_hits
-		):	contig_id(contig_id),
-			contig_start_pos(contig_start_pos),
-			reverse_strand(reverse_strand),
-			unsat_hits(unsat_hits),
-			sat_hits(sat_hits) {}
-
-	unsigned contig_id;
-	unsigned contig_start_pos;
-	bool reverse_strand;
-	unsigned unsat_hits;
-	unsigned sat_hits;
-};
-
 struct HitStruct{
 	HitStruct(){}
 
@@ -161,9 +109,10 @@ struct HitStruct{
 	unsigned read_pos;
 	bool reverse_strand;
 	bool unsaturated = false;
+	unsigned ref_relative_pos = 0;
 
 	unsigned ref_id;
-	unsigned ref_pos;
+	//unsigned ref_pos;
 /*
 	bool operator<(const HitStruct hit2)
 	{
@@ -174,167 +123,6 @@ struct HitStruct{
 			: mi_bf_pos < hit2.mi_bf_pos;
 	}*/
 };
-
-void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStruct>& hits_vec, 
-				std::string& record_id, unsigned read_pos,
-				int& max_space_between_hits, int& least_hit_in_region,
-				int& least_unsat_hit_to_start_region, int& max_shift_in_region){
-	//static vector<MappedRegion> regions;
-	bool extended = false;
-
-	for(auto& cur_struct : hits_vec){
-		extended = false;
-		// check if mapping is extending existing mapping region
-		// for reverse_strand contig_start_pos is contig _end pos
-		for(auto& region : regions){
-			if(region.contig_id == cur_struct.contig_id){				
-				if(cur_struct.reverse_strand == region.reverse_strand){
-					//std::cout << "here a" << std::endl;
-					if(cur_struct.contig_start_pos - region.last_contig_pos < max_space_between_hits){
-						//std::cout << "here b" << std::endl;
-						if(std::abs((int)(cur_struct.contig_start_pos - region.last_contig_pos) - (int)(read_pos - region.last_read_pos)) < max_shift_in_region ){
-							//std::cout << "here c" << std::endl;
-							if(cur_struct.sat_hits + cur_struct.unsat_hits >= least_hit_in_region){
-								//std::cout << "here d" << std::endl;
-								region.last_contig_pos = cur_struct.contig_start_pos;
-								region.last_read_pos = read_pos;
-								region.total_hit_pos = region.total_hit_pos + 1;
-								region.total_id_rep += cur_struct.sat_hits + cur_struct.unsat_hits;
-								extended = true;
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// if doesn't extend existing region, create mapping region if satisfies threshold
-		if(!extended && cur_struct.unsat_hits >= least_unsat_hit_to_start_region){
-			//std::cout << "here e" << std::endl;
-			regions.push_back(
-				MappedRegion(
-						record_id,
-						cur_struct.contig_id,
-						cur_struct.contig_start_pos,
-						cur_struct.contig_start_pos,
-						read_pos,
-						read_pos,
-						1,
-						cur_struct.sat_hits + cur_struct.unsat_hits,
-						cur_struct.reverse_strand
-					)
-			);
-		}
-
-	}
-
-}
-void print_regions_for_read_in_paf_format(	vector<MappedRegion>& regions, 
-						btllib::SeqReader::Record& record , 
-						ofstream& mapped_regions_file,
-						map<unsigned,unsigned>& m_length,
-						int& least_hit_count_report,
-						int residue_length,
-						map<unsigned,std::string>& m_name_vec){
-	for(auto& region : regions){
-		if(
-			region.total_hit_pos > least_hit_count_report
-		){
-			mapped_regions_file << 
-			record.id << "\t" <<
-			record.seq.length()  << "\t" <<
-			region.first_read_pos << "\t" <<
-			region.last_read_pos + residue_length << "\t" <<
-			(!region.reverse_strand ? '+' : '-') << "\t" << 
-			m_name_vec[region.contig_id] << "\t" <<
-			m_length[region.contig_id] << "\t" <<
-			(!region.reverse_strand ? region.first_contig_pos : m_length[region.contig_id] - region.last_contig_pos)<< "\t" <<
-			(!region.reverse_strand ? region.last_contig_pos : m_length[region.contig_id] - region.first_contig_pos)  + residue_length << "\t" <<
-			region.total_hit_pos << "\t" <<
-			region.last_contig_pos - region.first_contig_pos << "\t" <<
-			0  << // skip the qual score for now
-			std::endl;
-		}
-	}
-}
-
-
-void add_hit_to_vec(	vector<ContigHitsStruct>& hits_vec, unsigned &contig_id, 
-			unsigned &contig_start_dist, unsigned &contig_end_dist, bool &reverse_strand, bool &saturated){
-	bool found = false; 
-
-	for(auto& cur_struct : hits_vec) {
-		if(	cur_struct.contig_id == contig_id 
-			&& (!reverse_strand ? cur_struct.contig_start_pos == contig_start_dist : cur_struct.contig_start_pos == contig_end_dist)
-			&& cur_struct.reverse_strand == reverse_strand){
-			found = true;
-			if(!saturated){
-				cur_struct.unsat_hits = cur_struct.unsat_hits + 1;
-			} else {
-				cur_struct.sat_hits = cur_struct.sat_hits + 1;
-			}
-			break;
-		}
-	}
-	if(!found){
-		!reverse_strand ?
-		hits_vec.push_back(ContigHitsStruct(contig_id,contig_start_dist,reverse_strand, !saturated ? 1 : 0, saturated ? 1 : 0)) 
-		: hits_vec.push_back(ContigHitsStruct(contig_id,contig_end_dist,reverse_strand, !saturated ? 1 : 0, saturated ? 1 : 0));
-	}
-}
-
-void filter_regions_on_the_fly(vector<MappedRegion>& regions, unsigned read_pos){
-	int i = 0;
-	while(i < regions.size()){
-		if(regions[i].total_hit_pos < 5 && read_pos > regions[i].last_read_pos + 200){
-			regions.erase(regions.begin() + i);
-		} else {
-			++i;
-		}
-
-	}
-}
-
-void consolidate_mapped_regions(vector<MappedRegion>& regions){
-	// assume they are inserted in consecutive order
-	int i = 0;
-	int first_region_diff;
-	int second_region_diff;
-
-	std::sort(regions.begin(), regions.end());
-
-	while(i + 1 < regions.size()){
-		if(regions[i].contig_id == regions[i+1].contig_id){
-			if(regions[i].reverse_strand == regions[i+1].reverse_strand){
-				first_region_diff = (int)(regions[i].last_contig_pos) - (int)(regions[i].last_read_pos);
-				second_region_diff = (int)(regions[i+1].last_contig_pos) - (int)(regions[i+1].last_read_pos); 
-				if (std::abs(first_region_diff - second_region_diff) < 500 && regions[i].last_contig_pos < regions[i+1].first_contig_pos)
-				{
-					regions[i].indels.push_back(first_region_diff - second_region_diff);
-					regions[i].last_contig_pos = regions[i+1].last_contig_pos;
-					regions[i].last_read_pos = regions[i+1].last_read_pos;
-					regions[i].total_hit_pos += regions[i+1].total_hit_pos;
-					regions[i].total_id_rep += regions[i+1].total_id_rep;
-					regions.erase(regions.begin()+i+1);
-					//std::cout << "Indel of " << first_region_diff - second_region_diff << std::endl;
-					//std::cout << "regions[i].last_contig_pos " << regions[i].last_contig_pos << std::endl; 
-					//std::cout << "regions[i+1].first_contig_pos " << regions[i+1].first_contig_pos << std::endl; 
-				} else{
-					++i;
-					continue;
-				}
-
-			}else{
-				++i;
-				continue;
-			}
-		}else{
-			++i;
-			continue;
-		}
-	}
-}
 
 void read_vectors(std::string filename, map<unsigned,unsigned>& m_pos, vector<string>& m_name,
 	vector<unsigned>& m_id, map<unsigned,unsigned>& m_length, map<unsigned,std::string>& m_name_vec){
@@ -396,9 +184,8 @@ size_t find_reference_id_bs_helper(map<unsigned,unsigned> &m_pos, int first, int
 	}
 	return -1;
 }
-
 bool find_reference_id_bs(const int& search_pos, size_t& cur_ref_id, size_t& cur_ref_mi_bf_start, size_t& cur_ref_mi_bf_end, MapSingleReadParameters &params){
-	cur_ref_id = findContigBS(params.pos_vec, 1, params.pos_vec.end()->first, search_pos);
+	cur_ref_id = find_reference_id_bs_helper(params.pos_vec, 1, params.pos_vec.end()->first, search_pos);
 	cur_ref_mi_bf_start = params.pos_vec[cur_ref_id];
 	cur_ref_mi_bf_end =  params.pos_vec[cur_ref_id] + params.length_map[cur_ref_id];
 }
@@ -412,20 +199,38 @@ void assign_reference_info(vector<HitStruct>& all_hits, MapSingleReadParameters 
 			find_reference_id_bs(it->mi_bf_pos, cur_ref_id, cur_ref_mi_bf_start, cur_ref_mi_bf_end, params);
 			it->ref_id = cur_ref_id;
 		}
+		it->ref_relative_pos = it->reverse_strand ? 
+			it->read_pos + (it->mi_bf_pos - cur_ref_mi_bf_start)
+			: it->read_pos - (it->mi_bf_pos - cur_ref_mi_bf_start);
 	}
 }
 void group_by_ref_id_sort_by_read_pos(vector<HitStruct>& all_hits){
 	auto last_it = all_hits.begin();
 	size_t last_ref_id = all_hits.begin()->ref_id;
-	for (auto it = begin (all_hits); it != end (all_hits); ++it) {
-		if(it->ref_id != last_ref_id - 1){
+	for (auto it = begin (all_hits); it != end (all_hits); ++it) { // last group is bug currently
+		if(it->ref_id != last_ref_id){
 			std::sort(last_it, it,
 				[](const HitStruct& p1, const HitStruct& p2){ 
-					return p1.read_pos < p2.read_pos;});
+					return p1.read_pos < p2.read_pos;
+				});
 		}
 		last_it = it;
+		last_ref_id = it->ref_id;
 	}
 
+}
+static bool GroupRefAndSortPos(const HitStruct& h1, const HitStruct& h2)
+{
+    //minimap style sorting
+    if(h1.ref_id != h2.ref_id)
+        return (h1.ref_id < h2.ref_id);
+    if(h1.reverse_strand != h2.reverse_strand)
+        return (h1.reverse_strand < h2.reverse_strand);
+    if(h1.ref_relative_pos != h2.ref_relative_pos)
+        return (h1.ref_relative_pos < h2.ref_relative_pos);
+    if(h1.read_pos != h2.read_pos)
+        return (h1.read_pos < h2.read_pos);
+    return false;
 }
 template<typename H>
 bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, 
@@ -438,8 +243,8 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	vector<uint64_t> m_rank_pos_1(mi_bf.get_hash_num());
 	vector<ID> m_data_1(mi_bf.get_hash_num());
 	unsigned start_dist_1, end_dist_1, c_1;
-	vector<ContigHitsStruct> hits_vec;
-	hits_vec.reserve(mi_bf.get_hash_num());
+	//vector<ContigHitsStruct> hits_vec;
+	//hits_vec.reserve(mi_bf.get_hash_num());
 
 	vector<MappedRegion> regions;
 
@@ -454,12 +259,14 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 			m_data_1 = mi_bf.get_data(m_rank_pos_1);
 
 			for(unsigned m = 0; m < mi_bf.get_hash_num(); m++){
+				reverse_strand = bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward());
+				saturated= bool(!(m_data_1[m] > mi_bf.MASK));
 				all_hits.push_back(
 					HitStruct(
 						m_data_1[m] & FULL_ANTI_MASK,
 						itr1.get_pos(),
-						bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward()),
-						bool(!(m_data_1[m] > mi_bf.MASK))
+						reverse_strand,
+						saturated
 					)
 				);
 			}
@@ -475,7 +282,15 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	assign_reference_info(all_hits, params);
 
 	/* Group according to reference id and sort the group by read position */
-	group_by_ref_id_sort_by_read_pos(all_hits);
+	std::sort(all_hits.begin(), all_hits.end(),GroupRefAndSortPos);
+	//group_by_ref_id_sort_by_read_pos(all_hits);
+
+	for (auto it = begin (all_hits); it != end (all_hits); ++it) {
+		std::cout << "ref_id: " << it->ref_id << " ref_relative_pos: " << it->ref_relative_pos <<
+		" mi_bf_pos: " << it->mi_bf_pos << " read_pos: " << it->read_pos << 
+		" reverse_strand: " << it->reverse_strand << " unsaturated: " << it->unsaturated << " ref_relative_pos: " << it->ref_relative_pos << std::endl;
+	}
+
 }
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
