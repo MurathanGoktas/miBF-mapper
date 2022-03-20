@@ -236,35 +236,34 @@ void print_by_ref_relative_pos_threshold(vector<HitStruct>& all_hits, unsigned r
 	unsigned approved_ref_relative_pos = 0;
 	unsigned query_ref_relative_pos = 0;
 	unsigned count_cur_ref_relative_pos = 0;
+	vector<HitStruct> return_vec;
 	for (auto it1 = begin (all_hits); it1 != end (all_hits); ++it1) {
 		// Relative reference position is not tested, thus a pointer should walk to see if it satisfies threshold.
-		//std::cout << "approved_ref_relative_pos: "  << approved_ref_relative_pos << std::endl;
-		//std::cout << "query_ref_relative_pos: "  << query_ref_relative_pos << std::endl;
 		if(it1->ref_relative_pos != approved_ref_relative_pos){
 			count_cur_ref_relative_pos = 0;
 			query_ref_relative_pos = it1->ref_relative_pos;	
 			for (auto it2 = it1; it2 != end (all_hits); ++it2) {
-				//std::cout << "here 1"<< std::endl;
 				if(it2->ref_relative_pos == query_ref_relative_pos){
 					++count_cur_ref_relative_pos;
-					//std::cout << "here 2"<< std::endl;	
 				} else{
 					break;
-					//std::cout << "here 3"<< std::endl;
 				}
 				if(count_cur_ref_relative_pos >= ref_relative_pos_threshold){
-					//std::cout << "here 4"<< std::endl;
 					approved_ref_relative_pos = query_ref_relative_pos;	
 					break;
 				}
 			}
 		}
 		if(it1->ref_relative_pos == approved_ref_relative_pos){
+			return_vec.push_back(*it1);
+			/*
 			std::cout << "ref_id: " << it1->ref_id << " ref_relative_pos: " << it1->ref_relative_pos <<
 			" mi_bf_pos: " << it1->mi_bf_pos << " read_pos: " << it1->read_pos << 
 			" reverse_strand: " << it1->reverse_strand << " unsaturated: " << it1->unsaturated << " ref_relative_pos: " << it1->ref_relative_pos << std::endl;
+			*/
 		}
 	}
+	all_hits = return_vec;
 }
 
 template<typename H>
@@ -278,8 +277,6 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	vector<uint64_t> m_rank_pos_1(mi_bf.get_hash_num());
 	vector<ID> m_data_1(mi_bf.get_hash_num());
 	unsigned start_dist_1, end_dist_1, c_1;
-	//vector<ContigHitsStruct> hits_vec;
-	//hits_vec.reserve(mi_bf.get_hash_num());
 
 	vector<MappedRegion> regions;
 
@@ -320,13 +317,8 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	std::sort(all_hits.begin(), all_hits.end(),GroupRefAndSortPos);
 
 	print_by_ref_relative_pos_threshold(all_hits, 4);
-/*
-	for (auto it = begin (all_hits); it != end (all_hits); ++it) {
-		std::cout << "ref_id: " << it->ref_id << " ref_relative_pos: " << it->ref_relative_pos <<
-		" mi_bf_pos: " << it->mi_bf_pos << " read_pos: " << it->read_pos << 
-		" reverse_strand: " << it->reverse_strand << " unsaturated: " << it->unsaturated << " ref_relative_pos: " << it->ref_relative_pos << std::endl;
-	}
-	*/
+
+	std::cout << "all_hits.size(): " << all_hits.size() << std::endl;
 }
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
