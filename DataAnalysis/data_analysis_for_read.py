@@ -37,7 +37,7 @@ for o, a in opts:
     elif o in ("-f", "--false_aligned_reads_id_file"):
         false_aligned = a
     elif o in ("-w", "--window_size"):
-        window_size = a
+        window_size = int(a)
     else:
         assert False, "unhandled option"
 
@@ -77,5 +77,10 @@ graph_helper_obj.create_figure_of_multiple_subplots(
     window_size,
     unaligned_reads_df,
     'Unaligned - Celegans Abyss Assembly miBF Indexing - minSize:500' + ' ,window size: ' + str(window_size) + ' ,hash num: ' + str(hash_num) + " occ rate:" + str(occ_rate)
+)
+graph_helper_obj.create_figure_of_multiple_subplots(
+    window_size,
+    false_aligned_reads_df,
+    'False aligned - Celegans Abyss Assembly miBF Indexing - minSize:500' + ' ,window size: ' + str(window_size) + ' ,hash num: ' + str(hash_num) + " occ rate:" + str(occ_rate)
 )
 exit(0)
