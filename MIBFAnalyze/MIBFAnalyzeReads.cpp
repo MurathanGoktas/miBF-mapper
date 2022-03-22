@@ -112,18 +112,41 @@ struct HitStruct{
 	unsigned ref_relative_pos = 0;
 
 	unsigned ref_id;
-	//unsigned ref_pos;
-/*
-	bool operator<(const HitStruct hit2)
-	{
-		return	mi_bf_pos == hit2.mi_bf_pos ?
-				read_pos == hit2.read_pos ? 
-					read_pos < hit2.read_pos 
-				: !unsaturated
-			: mi_bf_pos < hit2.mi_bf_pos;
-	}*/
-};
 
+};
+struct SubChainStruct{
+	SubChainStruct(){}
+
+	SubChainStruct(
+		unsigned ref_id,
+		unsigned ref_relative_pos,
+		bool reverse_strand
+		):	ref_id(ref_id),
+			ref_relative_pos(ref_relative_pos),
+			reverse_strand(reverse_strand) {}
+
+	unsigned ref_id;
+	unsigned ref_relative_pos;
+	bool reverse_strand;
+
+	vector<unsigned> read_pos_vec;
+	vector<unsigned> mi_bf_pos_vec;
+
+	std::string to_string(){
+		std::string ret;
+		ret = "Ref id:" + std::to_string(ref_id) + " ref relative pos: " + std::to_string(ref_relative_pos) + " strand: " + std::to_string(reverse_strand);
+		 
+		stringstream ss;
+    		copy( read_pos_vec.begin(), read_pos_vec.end(), ostream_iterator<int>(ss, " "));
+		ret = ret +  "\n" + "Read pos vector: " + ss.str();
+
+		ss.str("");
+		copy( mi_bf_pos_vec.begin(), mi_bf_pos_vec.end(), ostream_iterator<int>(ss, " "));
+		ret = ret +  "\n" + "miBF pos vector: " + ss.str();
+
+		return ret;
+	}
+};
 void read_vectors(std::string filename, map<unsigned,unsigned>& m_pos, vector<string>& m_name,
 	vector<unsigned>& m_id, map<unsigned,unsigned>& m_length, map<unsigned,std::string>& m_name_vec){
 	ifstream idfile;
@@ -232,11 +255,57 @@ static bool GroupRefAndSortPos(const HitStruct& h1, const HitStruct& h2)
         return (h1.read_pos < h2.read_pos);
     return false;
 }
-void print_by_ref_relative_pos_threshold(vector<HitStruct>& all_hits, unsigned ref_relative_pos_threshold){
+void filter_by_different_mi_bf_pos_threshold(vector<HitStruct>& all_hits, unsigned different_mi_bf_pos_threshold){
+	unsigned approved_ref_relative_pos = 0;
+	unsigned query_ref_relative_pos = 0;
+	//unsigned count_cur_ref_relative_pos = 0;
+
+	unsigned last_mi_bf_pos = 0;
+	unsigned count_different_cur_mi_bf_pos = 0;
+	vector<HitStruct> return_vec;
+	/* Group by ref_relative_pos and keep if they are more than 4 */
+	for (auto it1 = begin (all_hits); it1 != end (all_hits); ++it1) {
+		// Relative reference position is not tested, thus a pointer should walk to see if it satisfies threshold.
+		if(it1->ref_relative_pos != approved_ref_relative_pos){
+			//std::cout << "here a" << std::endl;
+			count_different_cur_mi_bf_pos = 0;
+			query_ref_relative_pos = it1->ref_relative_pos;	
+			last_mi_bf_pos = it1->mi_bf_pos; 
+			for (auto it2 = it1; it2 != end (all_hits); ++it2) {
+				//std::cout << "here b" << std::endl;
+				if(it2->ref_relative_pos == query_ref_relative_pos){
+					if(last_mi_bf_pos != it2->mi_bf_pos){
+						//std::cout << "here c" << std::endl;
+						++count_different_cur_mi_bf_pos;
+						last_mi_bf_pos = it2->mi_bf_pos;
+					}
+				} else{
+					//std::cout << "here d" << std::endl;
+					break;
+				}
+				if(count_different_cur_mi_bf_pos >= different_mi_bf_pos_threshold){
+					approved_ref_relative_pos = query_ref_relative_pos;	
+					break;
+				}
+			}
+		}
+		if(it1->ref_relative_pos == approved_ref_relative_pos){
+			return_vec.push_back(*it1);
+			
+			std::cout << "ref_id: " << it1->ref_id << " ref_relative_pos: " << it1->ref_relative_pos <<
+			" mi_bf_pos: " << it1->mi_bf_pos << " read_pos: " << it1->read_pos << 
+			" reverse_strand: " << it1->reverse_strand << " unsaturated: " << it1->unsaturated << " ref_relative_pos: " << it1->ref_relative_pos << std::endl;
+			
+		}
+	}
+	all_hits = return_vec;
+}
+void filter_by_ref_relative_pos_threshold(vector<HitStruct>& all_hits, unsigned ref_relative_pos_threshold){
 	unsigned approved_ref_relative_pos = 0;
 	unsigned query_ref_relative_pos = 0;
 	unsigned count_cur_ref_relative_pos = 0;
 	vector<HitStruct> return_vec;
+	/* Group by ref_relative_pos and keep if they are more than 4 */
 	for (auto it1 = begin (all_hits); it1 != end (all_hits); ++it1) {
 		// Relative reference position is not tested, thus a pointer should walk to see if it satisfies threshold.
 		if(it1->ref_relative_pos != approved_ref_relative_pos){
@@ -256,16 +325,45 @@ void print_by_ref_relative_pos_threshold(vector<HitStruct>& all_hits, unsigned r
 		}
 		if(it1->ref_relative_pos == approved_ref_relative_pos){
 			return_vec.push_back(*it1);
-			/*
+			
 			std::cout << "ref_id: " << it1->ref_id << " ref_relative_pos: " << it1->ref_relative_pos <<
 			" mi_bf_pos: " << it1->mi_bf_pos << " read_pos: " << it1->read_pos << 
 			" reverse_strand: " << it1->reverse_strand << " unsaturated: " << it1->unsaturated << " ref_relative_pos: " << it1->ref_relative_pos << std::endl;
-			*/
+			
 		}
 	}
 	all_hits = return_vec;
 }
-
+void create_sub_chains(vector<HitStruct>& all_hits, MapSingleReadParameters &params){
+	vector<SubChainStruct> all_sub_chains;
+	unsigned last_ref_relative_pos = 0;
+	for (auto it = begin (all_hits); it != end (all_hits); ++it) {
+		unsigned ref_start_pos = it->mi_bf_pos - params.pos_vec[it->ref_id];
+		if(it->ref_relative_pos != last_ref_relative_pos || 
+		std::abs(int(all_sub_chains.back().mi_bf_pos_vec.back()) - int(ref_start_pos)) > 10){
+			all_sub_chains.push_back(
+				SubChainStruct(
+					it->ref_id,
+					it->ref_relative_pos,
+					it->reverse_strand
+				)
+			);
+			last_ref_relative_pos = it->ref_relative_pos; 
+		}
+		all_sub_chains.back().read_pos_vec.push_back(it->read_pos);
+		all_sub_chains.back().mi_bf_pos_vec.push_back(it->mi_bf_pos - params.pos_vec[all_sub_chains.back().ref_id]);
+	}
+	std::sort(all_sub_chains.begin(), all_sub_chains.end(),
+		[](const SubChainStruct& p1, const SubChainStruct& p2){ 
+				return p1.mi_bf_pos_vec.front() < p2.mi_bf_pos_vec.front();});
+	for (auto it = begin (all_sub_chains); it != end (all_sub_chains); ++it) {
+		if(it->read_pos_vec.size() < 4){
+			continue;
+		}
+		std::cout << it->to_string() << std::endl;
+	}
+	std::cout << "all_sub_chains size: " << all_sub_chains.size() << std::endl;
+}
 template<typename H>
 bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, 
 			MapSingleReadParameters &params){
@@ -316,9 +414,10 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	/* Group according to reference id and sort the group by read position */
 	std::sort(all_hits.begin(), all_hits.end(),GroupRefAndSortPos);
 
-	print_by_ref_relative_pos_threshold(all_hits, 4);
+	filter_by_ref_relative_pos_threshold(all_hits, 4);
+	filter_by_different_mi_bf_pos_threshold(all_hits, 3);
 
-	std::cout << "all_hits.size(): " << all_hits.size() << std::endl;
+	create_sub_chains(all_hits,params);
 }
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
