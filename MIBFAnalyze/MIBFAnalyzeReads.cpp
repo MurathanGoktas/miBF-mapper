@@ -48,6 +48,7 @@ struct MapSingleReadParameters{
 	int least_hit_count_report = 50; 
 	int max_shift_in_region = 100; 
 	int step_size = 1;
+	int allowed_indel_during_sub_chain_merge = 500;
 };
 
 struct MappedRegion{
@@ -242,7 +243,7 @@ void group_by_ref_id_sort_by_read_pos(vector<HitStruct>& all_hits){
 	}
 
 }
-static bool GroupRefAndSortPos(const HitStruct& h1, const HitStruct& h2)
+static bool HitStructGroupRefAndSortPos(const HitStruct& h1, const HitStruct& h2)
 {
     //minimap style sorting
     if(h1.ref_id != h2.ref_id)
@@ -253,6 +254,17 @@ static bool GroupRefAndSortPos(const HitStruct& h1, const HitStruct& h2)
         return (h1.ref_relative_pos < h2.ref_relative_pos);
     if(h1.read_pos != h2.read_pos)
         return (h1.read_pos < h2.read_pos);
+    return false;
+}
+static bool SubChainStructGroupRefAndSortPos(const SubChainStruct& s1, const SubChainStruct& s2)
+{
+    //minimap style sorting
+    if(s1.ref_id != s2.ref_id)
+        return (s1.ref_id < s2.ref_id);
+    if(s1.reverse_strand != s2.reverse_strand)
+        return (s1.reverse_strand < s2.reverse_strand);
+    if(s1.ref_relative_pos != s2.ref_relative_pos)
+        return (s1.ref_relative_pos < s2.ref_relative_pos);
     return false;
 }
 void filter_by_different_mi_bf_pos_threshold(vector<HitStruct>& all_hits, unsigned different_mi_bf_pos_threshold){
@@ -334,8 +346,9 @@ void filter_by_ref_relative_pos_threshold(vector<HitStruct>& all_hits, unsigned 
 	}
 	all_hits = return_vec;
 }
-void create_sub_chains(vector<HitStruct>& all_hits, MapSingleReadParameters &params){
-	vector<SubChainStruct> all_sub_chains;
+void create_sub_chains(	vector<SubChainStruct>& all_sub_chains, vector<HitStruct>& all_hits, 
+			MapSingleReadParameters &params){
+	//vector<SubChainStruct> all_sub_chains;
 	unsigned last_ref_relative_pos = 0;
 	for (auto it = begin (all_hits); it != end (all_hits); ++it) {
 		unsigned ref_start_pos = it->mi_bf_pos - params.pos_vec[it->ref_id];
@@ -363,6 +376,25 @@ void create_sub_chains(vector<HitStruct>& all_hits, MapSingleReadParameters &par
 		std::cout << it->to_string() << std::endl;
 	}
 	std::cout << "all_sub_chains size: " << all_sub_chains.size() << std::endl;
+}
+void merge_sub_chains(	vector<vector<SubChainStruct>> merged_sub_chains,
+			vector<SubChainStruct>& all_sub_chains, 
+			MapSingleReadParameters &params){
+	/* This must be dynamic programming later! */
+	//vector<vector<SubChainStruct>> merged_sub_chains;
+	int last_read_pos = -1;
+	int last_mi_bf_pos = -1;
+	for (auto it = begin (all_sub_chains); it != end (all_sub_chains); ++it) {
+		/* TODO */	
+		continue;
+		/* TODO */
+		/*
+		if(it->read_pos_vec.front() > last_read_pos &&
+		std::abs(it->mi_bf_pos_vec.front() - last_mi_bf_pos) < params.allowed_indel_during_sub_chain_merge){
+
+		}
+		*/
+	}
 }
 template<typename H>
 bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, 
@@ -412,12 +444,16 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	assign_reference_info(all_hits, params);
 
 	/* Group according to reference id and sort the group by read position */
-	std::sort(all_hits.begin(), all_hits.end(),GroupRefAndSortPos);
+	std::sort(all_hits.begin(), all_hits.end(),HitStructGroupRefAndSortPos);
 
 	filter_by_ref_relative_pos_threshold(all_hits, 4);
 	filter_by_different_mi_bf_pos_threshold(all_hits, 3);
 
-	create_sub_chains(all_hits,params);
+	vector<SubChainStruct> sub_chains;
+	create_sub_chains(sub_chains,all_hits,params);
+
+	vector<vector<SubChainStruct>> merged_sub_chains;
+	merge_sub_chains(merged_sub_chains,sub_chains,params);
 }
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
