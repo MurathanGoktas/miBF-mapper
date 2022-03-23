@@ -94,7 +94,7 @@ struct MappedRegion{
 	bool operator<(const MappedRegion &region2) const
 	{
 		return contig_id == region2.contig_id ?
-			first_read_pos < region2.first_read_pos
+			first_contig_pos < region2.first_contig_pos
 			: contig_id < region2.contig_id;
 	}
 };
@@ -134,26 +134,6 @@ void track_mapping_regions(	vector<MappedRegion>& regions, vector<ContigHitsStru
 		// for reverse_strand contig_start_pos is contig _end pos
 		for(auto& region : regions){
 			if(region.contig_id == cur_struct.contig_id){
-			/*
-				if(cur_struct.contig_id == 22){
-					std::cout << "------------\n";
-					std::cout << "read_pos " << read_pos << std::endl;
-					std::cout << "regions.size() " << regions.size() << std::endl;
-					std::cout << "region.contig_id " << region.contig_id << std::endl;
-					std::cout << "region.reverse_strand " << region.reverse_strand << std::endl;
-					std::cout << "region.first_contig_pos " << region.first_contig_pos << std::endl; 
-					std::cout << "region.last_contig_pos " << region.last_contig_pos << std::endl; 
-					std::cout << "region.first_read_pos " << region.first_read_pos << std::endl; 
-					std::cout << "region.last_read_pos " << region.last_read_pos << std::endl << std::endl;
-					
-					std::cout << "cur_struct.contig_id " << cur_struct.contig_id << std::endl;
-					std::cout << "cur_struct.contig_start_pos " << cur_struct.contig_start_pos << std::endl;
-					std::cout << "cur_struct.reverse_strand " << cur_struct.reverse_strand << std::endl;
-					std::cout << "cur_struct.unsat_hits " << cur_struct.unsat_hits << std::endl;
-					std::cout << "cur_struct.sat_hits " << cur_struct.sat_hits << std::endl;
-					std::cout << "------------\n";
-				}
-				*/
 				
 				if(cur_struct.reverse_strand == region.reverse_strand){
 					//std::cout << "here a" << std::endl;
@@ -276,7 +256,7 @@ void consolidate_mapped_regions(vector<MappedRegion>& regions){
 			if(regions[i].reverse_strand == regions[i+1].reverse_strand){
 				first_region_diff = (int)(regions[i].last_contig_pos) - (int)(regions[i].last_read_pos);
 				second_region_diff = (int)(regions[i+1].last_contig_pos) - (int)(regions[i+1].last_read_pos); 
-				if (std::abs(first_region_diff - second_region_diff) < 500 && regions[i].last_contig_pos < regions[i+1].first_contig_pos)
+				if (std::abs(first_region_diff - second_region_diff) < 1000 && regions[i].last_contig_pos < regions[i+1].first_contig_pos)
 				{
 					regions[i].indels.push_back(first_region_diff - second_region_diff);
 					regions[i].last_contig_pos = regions[i+1].last_contig_pos;
