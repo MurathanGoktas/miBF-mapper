@@ -38,21 +38,20 @@ def flag_suppl_alignments(sorted_paf_df):
 	sorted_paf_df["supplementary_alignment"] = pd.NaT
 	grouped_sorted_paf_df = sorted_paf_df.groupby('query_name')
 
-	max_alignment_block_length = 0
+	max_alignment_matching_residues = 0
 	max_alignment_block_ref_name = ""
 
 	for name, group in grouped_sorted_paf_df:
 		for row_index, row in group.iterrows():
-			##print(int(row["block_length"]))
-			if int(row["block_length"]) > max_alignment_block_length:
-				max_alignment_block_length = int(row["block_length"])
+			if int(row["matching_residues"]) > max_alignment_matching_residues:
+				max_alignment_matching_residues = int(row["matching_residues"])
 				max_alignment_block_ref_name = row["reference_name"]
 		for row_index, row in group.iterrows():
 			if row["reference_name"] == max_alignment_block_ref_name:
 				sorted_paf_df.loc[row_index, "supplementary_alignment"] = False
 			else:
 				sorted_paf_df.loc[row_index, "supplementary_alignment"] = True
-		max_alignment_block_length = 0
+		max_alignment_matching_residues = 0
 		max_alignment_block_ref_name = ""
 
 
