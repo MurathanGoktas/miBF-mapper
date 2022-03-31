@@ -187,6 +187,10 @@ void read_vectors(std::string filename, map<unsigned,unsigned>& m_pos, vector<st
 	}
 	idfile.close();
 }
+template<typename T>
+  T diff(const T&a, const T&b) {
+    return (a > b) ? (a - b) : (b - a);
+}
 size_t find_reference_id_bs_helper(map<unsigned,unsigned> &m_pos, int first, int last, int search_pos){
 	int middle;
 	if(last >= first)
@@ -303,11 +307,11 @@ void filter_by_different_mi_bf_pos_threshold(vector<HitStruct>& all_hits, unsign
 		}
 		if(it1->ref_relative_pos == approved_ref_relative_pos){
 			return_vec.push_back(*it1);
-			
+		/*
 			std::cout << "ref_id: " << it1->ref_id << " ref_relative_pos: " << it1->ref_relative_pos <<
 			" mi_bf_pos: " << it1->mi_bf_pos << " read_pos: " << it1->read_pos << 
 			" reverse_strand: " << it1->reverse_strand << " unsaturated: " << it1->unsaturated << " ref_relative_pos: " << it1->ref_relative_pos << std::endl;
-			
+			*/
 		}
 	}
 	all_hits = return_vec;
@@ -338,10 +342,11 @@ void filter_by_ref_relative_pos_threshold(vector<HitStruct>& all_hits, unsigned 
 		if(it1->ref_relative_pos == approved_ref_relative_pos){
 			return_vec.push_back(*it1);
 			
+			/*
 			std::cout << "ref_id: " << it1->ref_id << " ref_relative_pos: " << it1->ref_relative_pos <<
 			" mi_bf_pos: " << it1->mi_bf_pos << " read_pos: " << it1->read_pos << 
 			" reverse_strand: " << it1->reverse_strand << " unsaturated: " << it1->unsaturated << " ref_relative_pos: " << it1->ref_relative_pos << std::endl;
-			
+			*/
 		}
 	}
 	all_hits = return_vec;
@@ -373,28 +378,55 @@ void create_sub_chains(	vector<SubChainStruct>& all_sub_chains, vector<HitStruct
 		if(it->read_pos_vec.size() < 4){
 			continue;
 		}
-		std::cout << it->to_string() << std::endl;
+		//std::cout << it->to_string() << std::endl;
 	}
 	std::cout << "all_sub_chains size: " << all_sub_chains.size() << std::endl;
 }
-void merge_sub_chains(	vector<vector<SubChainStruct>> merged_sub_chains,
+void merge_sub_chains(	vector<SubChainStruct> merged_sub_chains,
 			vector<SubChainStruct>& all_sub_chains, 
 			MapSingleReadParameters &params){
 	/* This must be dynamic programming later! */
 	//vector<vector<SubChainStruct>> merged_sub_chains;
 	int last_read_pos = -1;
 	int last_mi_bf_pos = -1;
-	for (auto it = begin (all_sub_chains); it != end (all_sub_chains); ++it) {
-		/* TODO */	
-		continue;
-		/* TODO */
-		/*
-		if(it->read_pos_vec.front() > last_read_pos &&
-		std::abs(it->mi_bf_pos_vec.front() - last_mi_bf_pos) < params.allowed_indel_during_sub_chain_merge){
+	std::vector<int> last_index_in_longest_chain(all_sub_chains.size());
+	std::vector<int> total_residue_match_in_longest_chain(all_sub_chains.size());
+	for (int i = 0; i < all_sub_chains.size(); ++i) {
+		for (int j = i; j > 0; --j) {
+			if(all_sub_chains[i].ref_id != all_sub_chains[j].ref_id || all_sub_chains[i].reverse_strand != all_sub_chains[j].reverse_strand){
+				continue;
+			}
+			if(i == j){
+				last_index_in_longest_chain[i] = j;
+				total_residue_match_in_longest_chain[i] = all_sub_chains[i].read_pos_vec.size();
+				//std::cout << "here0!" << std::endl;
+			} else if(
+				diff<unsigned>(all_sub_chains[i].ref_relative_pos,all_sub_chains[j].ref_relative_pos) < params.allowed_indel_during_sub_chain_merge
+				&& total_residue_match_in_longest_chain[i] < total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size()){
+				last_index_in_longest_chain[i] = j;
+				total_residue_match_in_longest_chain[i] = total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size();
+				//std::cout << "here1!" << std::endl;
+			}
 
 		}
-		*/
 	}
+	int max_residue_match_in_chains = 0;
+	int last_index_of_chain_with_max_residue_match = 0;
+	for(int j=0; j<all_sub_chains.size(); j++){
+		if(total_residue_match_in_longest_chain[j] > max_residue_match_in_chains){
+			max_residue_match_in_chains = total_residue_match_in_longest_chain[j];
+			last_index_of_chain_with_max_residue_match = j;
+		}
+		//std::cout << "j: " << j << " " << total_residue_match_in_longest_chain[j] << std::endl;
+	}
+
+	int cur_index = last_index_of_chain_with_max_residue_match; 
+	while(cur_index != last_index_in_longest_chain[cur_index]){
+		//merged_sub_chains.push_front(all_sub_chains[cur_index]);
+		merged_sub_chains.insert(merged_sub_chains.begin(),all_sub_chains[cur_index]);
+		cur_index = last_index_in_longest_chain[cur_index];
+	}
+	std::cout << "merged_sub_chains.size(): " << merged_sub_chains.size() << std::endl;
 }
 template<typename H>
 bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, 
@@ -452,8 +484,8 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	vector<SubChainStruct> sub_chains;
 	create_sub_chains(sub_chains,all_hits,params);
 
-	vector<vector<SubChainStruct>> merged_sub_chains;
-	merge_sub_chains(merged_sub_chains,sub_chains,params);
+	vector<SubChainStruct> best_merged_sub_chains;
+	merge_sub_chains(best_merged_sub_chains,sub_chains,params);
 }
 int main(int argc, char** argv) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
