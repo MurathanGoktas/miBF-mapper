@@ -8,7 +8,7 @@
 
 enum FilterType {BLOOMFILTER, BLOOMMAP};
 
-typedef uint32_t ID;
+typedef uint64_t ID;
 
 /**
  * Global variables that are mostly constant for the duration of the
