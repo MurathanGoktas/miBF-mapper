@@ -241,20 +241,27 @@ public:
 				fp = gzopen(m_fileNames[i].c_str(), "r");
 				kseq_t *seq = kseq_init(fp);
 				int l;
+				
 #pragma omp parallel private(l)
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					l = kseq_read(seq);
-					if (l >= 0 && seq->seq.l >= opt::minSize) {
-						sequence = string(seq->seq.s, seq->seq.l);
-						name = string(seq->name.s, seq->name.l);
+					{
+						l = kseq_read(seq);
+						if (l >= 0 && seq->seq.l >= opt::minSize) {
+							sequence = string(seq->seq.s, seq->seq.l);
+							name = string(seq->name.s, seq->name.l);
+						}
 					}
+
 					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						std::cout << "seq: " << sequence.substr(0,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
+						int tid = omp_get_thread_num();
+        					printf("Hello world from omp thread %d\n", tid);
 						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
@@ -274,21 +281,24 @@ public:
 				fp = gzopen(m_fileNames[i].c_str(), "r");
 				kseq_t *seq = kseq_init(fp);
 				int l;
+				
 #pragma omp parallel private(l)
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					
-					l = kseq_read(seq);
-					if (l >= 0 && seq->seq.l >= opt::minSize) {
-						sequence = string(seq->seq.s, seq->seq.l);
-						name = string(seq->name.s, seq->name.l);
+					{
+						l = kseq_read(seq);
+						if (l >= 0 && seq->seq.l >= opt::minSize) {
+							sequence = string(seq->seq.s, seq->seq.l);
+							name = string(seq->name.s, seq->name.l);
+						}
 					}
 					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
+						std::cout << "saturation seq: " << sequence.substr(0,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
 						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
