@@ -133,9 +133,9 @@ public:
 			<< std::endl;
 
 		//make saturation bit is not exceeded
-		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 1)));
+		assert(m_ids.size() / opt::bucketSize < ID(1 << (sizeof(ID) * 8 - 1)));
 		//make strand bit is not exceeded
-		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 2)));
+		assert(m_ids.size() / opt::bucketSize < ID(1 << (sizeof(ID) * 8 - 2)));
 
 		//estimate number of k-mers
 		if (m_expectedEntries == 0) {
@@ -154,7 +154,7 @@ public:
 		double time = omp_get_wtime();
 
 		MIBFConstructSupport<ID, H> miBFCS(m_expectedEntries, m_kmerSize,
-				opt::hashNum, occ, opt::sseeds);
+				opt::hashNum, occ, opt::sseeds, opt::bucketSize);
 		vector<vector<unsigned> > ssVal;
 		if (!opt::sseeds.empty()) {
 			ssVal =	btllib::parse_seeds(opt::sseeds);
@@ -494,7 +494,7 @@ private:
 	template<typename H>
 	H hashIterator(const string &seq,
 			const vector<vector<unsigned> > &seedVal) {
-		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize, opt::stepSize);
+		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize);
 	}
 
 	/*

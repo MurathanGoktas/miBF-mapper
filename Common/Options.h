@@ -44,6 +44,7 @@ namespace opt {
 	extern std::string prefix;
 	extern unsigned kmerSize;
 	extern unsigned stepSize;
+	extern unsigned bucketSize;
 	extern unsigned minSize;
 	extern unsigned hashNum;
 	extern unsigned numEle;
