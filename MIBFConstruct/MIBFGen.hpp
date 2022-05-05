@@ -32,6 +32,9 @@
 #include <google/dense_hash_set>
 #include <sdsl/int_vector.hpp>
 
+#include <chrono>
+#include <ctime>
+
 #include <zlib.h>
 #include <stdio.h>
 #ifndef KSEQ_INIT_NEW
@@ -53,6 +56,7 @@ public:
 		//dense hash maps take POD, and strings need to live somewhere
 		m_nameToID.set_empty_key(m_ids[0]);
 		size_t counts = 0;
+		auto start = std::chrono::system_clock::now();
 		if (opt::idByFile) {
 			for (unsigned i = 0; i < m_fileNames.size(); ++i) {
 				m_ids.push_back(m_fileNames[i].substr(
@@ -120,6 +124,13 @@ public:
 				gzclose(fp);
 			}
 		}
+		auto end = std::chrono::system_clock::now();
+		std::chrono::duration<double> elapsed_seconds = end-start;
+		std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+		
+		std::cout << "Read genomes - finished computation at " << std::ctime(&end_time)
+			<< "elapsed time: " << elapsed_seconds.count() << "s"
+			<< std::endl;
 
 		//make saturation bit is not exceeded
 		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 1)));
@@ -148,7 +159,16 @@ public:
 		if (!opt::sseeds.empty()) {
 			ssVal =	btllib::parse_seeds(opt::sseeds);
 		}
+
+		auto start = std::chrono::system_clock::now();
 		generateBV(miBFCS, ssVal);
+		auto end = std::chrono::system_clock::now();
+		std::chrono::duration<double> elapsed_seconds = end-start;
+		std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+		
+		std::cout << "bitvector generation -- finished computation at " << std::ctime(&end_time)
+			<< "elapsed time: " << elapsed_seconds.count() << "s"
+			<< std::endl;
 
 		if (opt::verbose){
 			cerr << "Finishing initial Bit vector construction " <<  omp_get_wtime() - time << "s" << endl;
@@ -162,6 +182,7 @@ public:
 		if (opt::verbose)
 			cerr << "Mem usage (kB): " << memKB << endl;
 
+		
 		if (opt::idByFile) {
 #pragma omp parallel for schedule(dynamic)
 			for (unsigned i = 0; i < m_fileNames.size(); ++i) {
@@ -241,7 +262,7 @@ public:
 				fp = gzopen(m_fileNames[i].c_str(), "r");
 				kseq_t *seq = kseq_init(fp);
 				int l;
-				
+				start = std::chrono::system_clock::now();
 #pragma omp parallel private(l)
 				for (;;) {
 					string sequence, name;
@@ -259,7 +280,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						std::cout << "seq: " << sequence.substr(0,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
+						std::cout << "seq: " << sequence.substr(1000000,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
 						int tid = omp_get_thread_num();
         					printf("Hello world from omp thread %d\n", tid);
 						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]]);
@@ -269,6 +290,13 @@ public:
 				}
 				kseq_destroy(seq);
 				gzclose(fp);
+				end = std::chrono::system_clock::now();
+				elapsed_seconds = end-start;
+				end_time = std::chrono::system_clock::to_time_t(end);
+				
+				std::cout << "mibf insertion -- finished computation at " << std::ctime(&end_time)
+					<< "elapsed time: " << elapsed_seconds.count() << "s"
+					<< std::endl;
 			}
 			//apply saturation
 			if(opt::verbose){
@@ -281,7 +309,7 @@ public:
 				fp = gzopen(m_fileNames[i].c_str(), "r");
 				kseq_t *seq = kseq_init(fp);
 				int l;
-				
+				start = std::chrono::system_clock::now();
 #pragma omp parallel private(l)
 				for (;;) {
 					string sequence, name;
@@ -298,7 +326,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						std::cout << "saturation seq: " << sequence.substr(0,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
+						std::cout << "saturation seq: " << sequence.substr(1000000,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
 						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
@@ -306,6 +334,13 @@ public:
 				}
 				kseq_destroy(seq);
 				gzclose(fp);
+				end = std::chrono::system_clock::now();
+				elapsed_seconds = end-start;
+				end_time = std::chrono::system_clock::to_time_t(end);
+				
+				std::cout << "mibf saturation -- finished computation at " << std::ctime(&end_time)
+					<< "elapsed time: " << elapsed_seconds.count() << "s"
+					<< std::endl;
 			}
 		}
 
