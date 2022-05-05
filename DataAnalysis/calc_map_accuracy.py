@@ -82,7 +82,7 @@ def check_accuracies(df):
 		
 		true_ref_end_pos = true_ref_start_pos + head_length + middle_region_length
 		
-		cur_overlap += overlap(int(true_ref_start_pos)+int(head_length),int(true_ref_end_pos),int(df.loc[i, "reference_start"]),int(df.loc[i, "reference_end"]))
+		cur_overlap = overlap(int(true_ref_start_pos)+int(head_length),int(true_ref_end_pos),int(df.loc[i, "reference_start"]),int(df.loc[i, "reference_end"]))
 		
 		if i < len(df) - 1 and df.loc[i, "query_name"] == df.loc[i+1, "query_name"] and df.loc[i, "reference_name"] == df.loc[i+1, "reference_name"]: 
 			continue
