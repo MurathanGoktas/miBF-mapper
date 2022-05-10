@@ -5,6 +5,7 @@
 #include <set>
 #include <iostream>
 #include <cstdlib> //argparse
+#include <climits> // CHARBIT
 #include <getopt.h>
 #include <omp.h> //openmp
 //#include <map>
@@ -227,6 +228,7 @@ bool find_reference_id_bs(const size_t& search_pos, size_t& cur_ref_id, size_t& 
 	cur_ref_id = find_reference_id_bs_helper(params.pos_vec, 1, params.pos_vec.end()->first, search_pos);
 	cur_ref_mi_bf_start = params.pos_vec[cur_ref_id];
 	cur_ref_mi_bf_end =  params.pos_vec[cur_ref_id] + params.length_map[cur_ref_id];
+	return true; // can be changed!
 }
 void assign_reference_info(vector<HitStruct>& all_hits, MapSingleReadParameters &params){
 
@@ -625,7 +627,9 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 			m_data_1 = mi_bf.get_data(m_rank_pos_1);
 
 			for(size_t m = 0; m < mi_bf.get_hash_num(); m++){
-				reverse_strand = bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward());
+				
+				reverse_strand = bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward(m));
+				//std::cout << "reverse_strand: " << reverse_strand << " itr1.forward(): " << itr1.forward() << std::endl;
 				saturated= bool(!(m_data_1[m] > mi_bf.MASK));
 				all_hits.push_back(
 					HitStruct(
@@ -708,6 +712,8 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 		//std::cout << "real ref id: " << best_chain[0].ref_id << std::endl;
 	}
 	std::cout << "-----\n\n\n------" << std::flush;
+
+	return true;
 	
 }
 int main(int argc, char** argv) {
@@ -893,7 +899,10 @@ int main(int argc, char** argv) {
 	params_bundle.verbose = verbose;
 	
 	// read miBF
+	std::cout << "here1" << std::endl;
+	std::cout << mibf_path << std::endl;	
 	btllib::MIBloomFilter<ID> mi_bf = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
+	std::cout << "here2" << std::endl;
 
 	// read supplementary files
 	read_vectors(mibf_path + "_id_file.txt", params_bundle.pos_vec, params_bundle.name_vec, params_bundle.id_vec, params_bundle.length_map, params_bundle.name_map);
