@@ -61,7 +61,7 @@ srcdir=$(cd $srcdir; pwd)
 GITCOMMIT=$(git log -1 --pretty='%h')
 AC_MSG_NOTICE([$GITCOMMIT])
 
-btllib_flags="-L $srcdir/btllib/lib"
+btllib_flags="-L $srcdir/btllib/install/lib"
 
 # Set compiler flags.
 AC_SUBST(CPPFLAGS,"-I$srcdir $boost_cppflags $sparsehash_cppflags $sdsl_cppflags $zlib_cppflags $CPPFLAGS -DGITCOMMIT=$GITCOMMIT ")
