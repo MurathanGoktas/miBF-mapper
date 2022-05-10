@@ -133,9 +133,9 @@ public:
 			<< std::endl;
 
 		//make saturation bit is not exceeded
-		assert(m_ids.size() / opt::bucketSize < ID(1 << (sizeof(ID) * 8 - 1)));
+		assert(m_ids.size() < ID(ID(1) << (sizeof(ID) * 8 - 1))); // multiplying with CHARBIT could be even better instead of 8
 		//make strand bit is not exceeded
-		assert(m_ids.size() / opt::bucketSize < ID(1 << (sizeof(ID) * 8 - 2)));
+		assert(m_ids.size() < ID(ID(1) << (sizeof(ID) * 8 - 2))); // multiplying with CHARBIT could be even better instead of 8
 
 		//estimate number of k-mers
 		if (m_expectedEntries == 0) {
@@ -154,7 +154,7 @@ public:
 		double time = omp_get_wtime();
 
 		MIBFConstructSupport<ID, H> miBFCS(m_expectedEntries, m_kmerSize,
-				opt::hashNum, occ, opt::sseeds, opt::bucketSize);
+				opt::hashNum, occ, opt::sseeds);
 		vector<vector<unsigned> > ssVal;
 		if (!opt::sseeds.empty()) {
 			ssVal =	btllib::parse_seeds(opt::sseeds);
@@ -165,6 +165,7 @@ public:
 		auto end = std::chrono::system_clock::now();
 		std::chrono::duration<double> elapsed_seconds = end-start;
 		std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+		std::cout << "here" << std::endl;
 		
 		std::cout << "bitvector generation -- finished computation at " << std::ctime(&end_time)
 			<< "elapsed time: " << elapsed_seconds.count() << "s"
@@ -280,9 +281,6 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						std::cout << "seq: " << sequence.substr(1000000,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
-						int tid = omp_get_thread_num();
-        					printf("Hello world from omp thread %d\n", tid);
 						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
@@ -326,7 +324,6 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						std::cout << "saturation seq: " << sequence.substr(1000000,10) << " name: " << name << " m_start_pos[m_nameToID[name]] " << m_start_pos[m_nameToID[name]] << std::endl; 
 						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
