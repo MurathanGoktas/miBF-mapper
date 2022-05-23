@@ -206,10 +206,7 @@ public:
 					}
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
-						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
-
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name] - 1], opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
@@ -249,7 +246,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
@@ -281,7 +278,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
@@ -324,7 +321,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
@@ -486,6 +483,7 @@ private:
 			cerr << "Approximate number of unique frames in filter: "
 					<< uniqueCounts << endl;
 		}
+
 	}
 
 	template<typename H>
@@ -494,19 +492,6 @@ private:
 		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize);
 	}
 
-	/*
-	template <typename H>
-	H hashIterator(const string &seq,
-			const vector<vector<unsigned> > &seedVal) {
-		if (std::is_same<H, btllib::SeedNtHash>::value){
-			return btllib::SeedNtHash(seq, seedVal, 1, m_kmerSize); //opt_size deleted
-		} else{
-			return btllib::NtHash(seq, opt::hashNum, m_kmerSize); //opt_size deleted
-		}
-		
-	}
-	*/
-
 	inline void writeIDs(std::ofstream &file) const {
 		assert(file);
 		for (ID i = 1; i < m_ids.size(); ++i) {
@@ -514,7 +499,6 @@ private:
 			assert(file);
 		}
 	}
-
 
 	//TODO move these functions to a common util class?
 	/*
