@@ -154,7 +154,10 @@ public:
 		double time = omp_get_wtime();
 
 		MIBFConstructSupport<ID, H> miBFCS(m_expectedEntries, m_kmerSize,
-				opt::hashNum, occ, opt::sseeds);
+				opt::hashNum, occ, m_ids, m_start_pos, m_contig_length, opt::sseeds);
+
+		//MIBFConstructSupport<ID, H> miBFCS(m_expectedEntries, m_kmerSize,
+		//		opt::hashNum, occ, opt::sseeds);
 		vector<vector<unsigned> > ssVal;
 		if (!opt::sseeds.empty()) {
 			ssVal =	btllib::parse_seeds(opt::sseeds);
@@ -206,7 +209,8 @@ public:
 					}
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
-						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name] - 1], opt::bucketSize);
+						//miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name] - 1], opt::bucketSize);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
 					} else if (l < 0){
 						break;
 					}
@@ -246,7 +250,8 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
+						//miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
 					}
@@ -276,9 +281,9 @@ public:
 					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
-						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
+						//miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
+						//miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]],name);
 					} else if (l < 0){
 						break;
 					}
@@ -321,7 +326,8 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
+						//miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
 					} else if (l < 0){
 						break;
 					}
