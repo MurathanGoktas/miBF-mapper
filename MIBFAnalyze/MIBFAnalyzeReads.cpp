@@ -644,8 +644,6 @@ void merge_sub_chains(	vector<SubChainStruct>& merged_sub_chains,
 	//std::cout << "here 10" << std::endl;
 	for (int i = 0; i < all_sub_chains.size(); i++) {
 		for (int j = i; j >= 0; j--) {
-			std::cout << "here00!" << std::endl;
-			std::cout << "j: " << j << std::endl;
 			unsigned unsaturation_bonus = (all_sub_chains[i].total_unsaturated_hits * 20); 
 			if(all_sub_chains[i].ref_id != all_sub_chains[j].ref_id || all_sub_chains[i].reverse_strand != all_sub_chains[j].reverse_strand){
 				continue;
@@ -653,7 +651,6 @@ void merge_sub_chains(	vector<SubChainStruct>& merged_sub_chains,
 			if(i == j){
 				last_index_in_longest_chain[i] = j;
 				total_residue_match_in_longest_chain[i] = all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus;
-				std::cout << "here01!" << std::endl;
 			} else if(
 				diff<size_t>(all_sub_chains[i].ref_relative_pos,all_sub_chains[j].ref_relative_pos) < params.allowed_indel_inter_sub_chain_merge
 				&& total_residue_match_in_longest_chain[i] < total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus){
@@ -662,10 +659,8 @@ void merge_sub_chains(	vector<SubChainStruct>& merged_sub_chains,
 						: all_sub_chains[j].read_pos_vec[0] >= all_sub_chains[i].read_pos_vec.back()){
 					last_index_in_longest_chain[i] = j;
 					total_residue_match_in_longest_chain[i] = total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus;
-					std::cout << "here11!" << std::endl;
 				}
 			}
-			std::cout << "here12!" << std::endl;
 			
 		}
 	}
@@ -995,7 +990,7 @@ int main(int argc, char** argv) {
 		}
 	}
 #if defined(_OPENMP)
-	if (threads > 0)
+	if (threads > 0 && bucket_size == 1)
 	omp_set_num_threads(threads);
 #endif
 
@@ -1018,12 +1013,16 @@ int main(int argc, char** argv) {
 	params_bundle.sub_chains_total_hit_threshold = sub_chains_total_hit_threshold;
 	params_bundle.bucket_size = bucket_size;
 	params_bundle.verbose = verbose;
+
+	if(params_bundle.bucket_size > 1){
+		params_bundle.collinear_hits_total_hit_threshold_before_sub_chains = 0;
+		params_bundle.collinear_hits_total_different_pos_threshold_before_sub_chains = 0;
+		params_bundle.sub_chains_total_hit_threshold = 10;
+	}
 	
 	// read miBF
-	std::cout << "here1" << std::endl;
 	std::cout << mibf_path << std::endl;	
 	btllib::MIBloomFilter<ID> mi_bf = btllib::MIBloomFilter<ID>(mibf_path + ".bf");
-	std::cout << "here2" << std::endl;
 
 	// read supplementary files
 	read_vectors(mibf_path + "_id_file.txt", params_bundle.pos_vec, params_bundle.name_vec, params_bundle.id_vec, params_bundle.length_map, params_bundle.name_map);
