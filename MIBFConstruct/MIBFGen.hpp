@@ -110,11 +110,14 @@ public:
 						m_ids.push_back(string(seq->name.s, seq->name.l));
 						m_nameToID[m_ids.back()] = m_ids.size() - 1;
 						counts += seq->seq.l - m_kmerSize + 1;
+
+						//m_start_pos.push_back((m_start_pos.back()) + (m_contig_length.back() % opt::bucketSize == 0 ? m_contig_length.back() : m_contig_length.back() + 1));
 						m_start_pos.push_back(prev_total_length);
-						prev_total_length += seq->seq.l;
-						m_contig_length.push_back(seq->seq.l);
 						
-						myFile << m_ids.back() << "\t" << m_nameToID[m_ids.back()] << "\t" << m_start_pos[m_nameToID[m_ids.back()]] << "\t" << seq->seq.l << std::endl; 
+						m_contig_length.push_back((seq->seq.l / opt::bucketSize) + (seq->seq.l % opt::bucketSize == 0 ? 0 : 1));
+						prev_total_length += m_contig_length.back();
+						
+						myFile << m_ids.back() << "\t" << m_nameToID[m_ids.back()] << "\t" << m_start_pos[m_nameToID[m_ids.back()]] << "\t" << m_contig_length.back() << std::endl; 
 					} else if (l < 0){
 						kseq_destroy(seq);
 						break;
@@ -272,13 +275,11 @@ public:
 							name = string(seq->name.s, seq->name.l);
 						}
 					}
-
-					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
@@ -321,7 +322,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
