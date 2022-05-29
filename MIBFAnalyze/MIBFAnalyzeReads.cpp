@@ -21,15 +21,6 @@
 
 typedef uint64_t ID;
 
-/*
-const uint max_space_between_hits = 200;
-const uint least_unsat_hit_to_start_region = 4;
-const uint least_hit_in_region = 1;
-const uint least_hit_count_report = 50;
-const int max_shift_in_region = 20;
-const uint step_size = 1;
-*/
-
 using namespace std;
 
 struct MapSingleReadParameters{
@@ -319,11 +310,6 @@ void filter_by_different_mi_bf_pos_threshold(vector<HitStruct>& all_hits, int di
 		}
 		if(it1->ref_relative_pos == approved_ref_relative_pos){
 			return_vec.push_back(*it1);
-		/*
-			std::cout << "ref_id: " << it1->ref_id << " ref_relative_pos: " << it1->ref_relative_pos <<
-			" mi_bf_pos: " << it1->mi_bf_pos << " read_pos: " << it1->read_pos << 
-			" reverse_strand: " << it1->reverse_strand << " unsaturated: " << it1->unsaturated << " ref_relative_pos: " << it1->ref_relative_pos << std::endl;
-			*/
 		}
 	}
 	all_hits = return_vec;
@@ -353,12 +339,6 @@ void filter_by_ref_relative_pos_threshold(vector<HitStruct>& all_hits, int ref_r
 		}
 		if(it1->ref_relative_pos == approved_ref_relative_pos){
 			return_vec.push_back(*it1);
-			
-			/*
-			std::cout << "ref_id: " << it1->ref_id << " ref_relative_pos: " << it1->ref_relative_pos <<
-			" mi_bf_pos: " << it1->mi_bf_pos << " read_pos: " << it1->read_pos << 
-			" reverse_strand: " << it1->reverse_strand << " unsaturated: " << it1->unsaturated << " ref_relative_pos: " << it1->ref_relative_pos << std::endl;
-			*/
 		}
 	}
 	all_hits = return_vec;
@@ -389,7 +369,6 @@ void create_sub_chains(	vector<SubChainStruct>& all_sub_chains, vector<HitStruct
 			);
 			last_ref_relative_pos = it->ref_relative_pos; 
 		}
-		//last_ref_relative_pos = it->ref_relative_pos; // this line is new!!
 		all_sub_chains.back().read_pos_vec.push_back(it->read_pos);
 		all_sub_chains.back().ref_start_pos_vec.push_back(it->mi_bf_pos - params.pos_vec[all_sub_chains.back().ref_id]); // mi_bf_pos_vec is actually ref pos
 		
@@ -406,8 +385,6 @@ void create_sub_chains(	vector<SubChainStruct>& all_sub_chains, vector<HitStruct
 			std::cout << it->to_string() << std::endl;
 		}
 	}
-		 
-	//std::cout << "all_sub_chains size: " << all_sub_chains.size() << std::endl;
 }
 void extend_best_chain(vector<SubChainStruct>& chain, MapSingleReadParameters &params, vector<HitStruct>& all_hits){
 	std::sort(all_hits.begin(), all_hits.end(),
@@ -417,8 +394,6 @@ void extend_best_chain(vector<SubChainStruct>& chain, MapSingleReadParameters &p
 	SubChainStruct first_sub = chain[0];
 	SubChainStruct last_sub = chain.back();
 
-	//std::cout << last_sub.reverse_strand << std::endl;
-
 	size_t first_mibf_pos = (first_sub.reverse_strand ? first_sub.ref_start_pos_vec.back() : first_sub.ref_start_pos_vec[0]) + params.pos_vec[chain.back().ref_id]; // if reverse, already sorted in descending read_pos order
 	size_t last_mibf_pos = (first_sub.reverse_strand ? last_sub.ref_start_pos_vec[0] : last_sub.ref_start_pos_vec.back()) + params.pos_vec[chain.back().ref_id];
 
@@ -427,7 +402,6 @@ void extend_best_chain(vector<SubChainStruct>& chain, MapSingleReadParameters &p
 	size_t last_mibf_pos_counter = 0;
 	for (auto i = all_hits.begin(); i < all_hits.end(); i++)
 	{
-		//std::cout << "i->mi_bf_pos: " << i->mi_bf_pos << std::endl; 
 		if(i->mi_bf_pos == first_mibf_pos){
 			first_mibf_pos_counter = i - all_hits.begin();
 		}
@@ -462,9 +436,6 @@ void extend_best_chain(vector<SubChainStruct>& chain, MapSingleReadParameters &p
 			}
 		}
 	}
-	//if(last_added_mi_bf_pos != first_mibf_pos){
-	//	std::cout << "to the left init start pos: " << first_mibf_pos << " new start pos: " << last_added_mi_bf_pos << std::endl; 
-	//}
 
 	start_itr = all_hits.begin();
     	start_itr = std::next(start_itr, last_mibf_pos_counter);
@@ -485,9 +456,6 @@ void extend_best_chain(vector<SubChainStruct>& chain, MapSingleReadParameters &p
 
 		}
 	}
-	//if(last_added_mi_bf_pos != first_mibf_pos){
-	//	std::cout << "to the right init start pos: " << first_mibf_pos << " new start pos: " << last_added_mi_bf_pos << std::endl; 
-	//}
 	
 	
 }
@@ -496,13 +464,8 @@ void print_hits_to_chains(vector<SubChainStruct>& chain, vector<HitStruct>& all_
 		[](const HitStruct& p1, const HitStruct& p2){ 
 				return p1.mi_bf_pos < p2.mi_bf_pos;});
 
-	//std::cout << "chain.size() " << chain.size() << std::endl;
 	SubChainStruct first_sub = chain[0];
 	SubChainStruct last_sub = chain.back();
-
-	//std::cout << first_sub.ref_start_pos_vec[0] << " - " << first_sub.ref_start_pos_vec.back() << std::endl;
-	//std::cout << last_sub.ref_start_pos_vec[0] << " ---- " << last_sub.ref_start_pos_vec.back() << std::endl;
-	//std::cout << last_sub.reverse_strand << std::endl;
 
 	size_t first_mibf_pos = (first_sub.reverse_strand ? first_sub.ref_start_pos_vec.back() : first_sub.ref_start_pos_vec[0]) + params.pos_vec[chain.back().ref_id]; // if reverse, already sorted in descending read_pos order
 	size_t last_mibf_pos = (first_sub.reverse_strand ? last_sub.ref_start_pos_vec[0] : last_sub.ref_start_pos_vec.back()) + params.pos_vec[chain.back().ref_id];
@@ -510,12 +473,10 @@ void print_hits_to_chains(vector<SubChainStruct>& chain, vector<HitStruct>& all_
 	size_t counter = 0;
 	for (auto i = all_hits.begin(); i < all_hits.end(); i++)
 	{
-		//std::cout << "i->mi_bf_pos: " << i->mi_bf_pos << std::endl; 
 		if(i->mi_bf_pos <= last_mibf_pos && i->mi_bf_pos >= first_mibf_pos){
 			counter = counter + 1;
 		}
 	}
-	//std::cout << "Total hit counter: " << counter << std::endl;
 }
 void print_chain_properties(vector<SubChainStruct>& chain, MapSingleReadParameters &params){
 	SubChainStruct first_sub = chain[0];
@@ -550,15 +511,12 @@ void print_best_chain_as_paf(btllib::SeqReader::Record &record, vector<SubChainS
 	SubChainStruct first_sub = best_chain[0];
 	SubChainStruct last_sub = best_chain.back();
 	int residue_length = 15;
-//std::cout << "here 20" << std::endl;
+
 	size_t total_hit_pos = 0;
 	for (auto it = begin (best_chain); it != end (best_chain); ++it) {
 		total_hit_pos += it->read_pos_vec.size(); 
 	}
 
-//std::cout << "here 21" << std::endl;
- //#pragma omp critical 
- // {
 	params.output_paf_file << 
 		record.id << "\t" <<
 		record.seq.length()  << "\t" <<
@@ -572,7 +530,6 @@ void print_best_chain_as_paf(btllib::SeqReader::Record &record, vector<SubChainS
 		total_hit_pos << "\t" <<
 		(last_sub.ref_start_pos_vec.back() - first_sub.ref_start_pos_vec[0]) * params.bucket_size + residue_length << "\t" << //region.last_contig_pos - region.first_contig_pos << "\t" <<
 		0 << std::endl; // skip the qual score for now
- // }
 }
 vector<SubChainStruct> find_best_chain_to_specific_ref(	vector<SubChainStruct>& all_sub_chains,
 														size_t search_id,
@@ -581,7 +538,7 @@ vector<SubChainStruct> find_best_chain_to_specific_ref(	vector<SubChainStruct>& 
 	size_t last_mi_bf_pos = 0;
 	std::vector<size_t> last_index_in_longest_chain(all_sub_chains.size());
 	std::vector<size_t> total_residue_match_in_longest_chain(all_sub_chains.size());
-	//std::cout << "here 10" << std::endl;
+	
 	for (size_t i = 0; i < all_sub_chains.size(); ++i) {
 		for (size_t j = i; j > 0; --j) {
 			unsigned unsaturation_bonus = (all_sub_chains[i].total_unsaturated_hits * 20); 
@@ -594,7 +551,6 @@ vector<SubChainStruct> find_best_chain_to_specific_ref(	vector<SubChainStruct>& 
 			if(i == j){
 				last_index_in_longest_chain[i] = j;
 				total_residue_match_in_longest_chain[i] = all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus;
-				//std::cout << "here0!" << std::endl;
 			} else if(
 				diff<size_t>(all_sub_chains[i].ref_relative_pos,all_sub_chains[j].ref_relative_pos) < params.allowed_indel_inter_sub_chain_merge
 				&& total_residue_match_in_longest_chain[i] < total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus){
@@ -608,7 +564,6 @@ vector<SubChainStruct> find_best_chain_to_specific_ref(	vector<SubChainStruct>& 
 
 		}
 	}
-	//std::cout << "here 11" << std::endl;
 	size_t max_residue_match_in_chains = 0;
 	size_t last_index_of_chain_with_max_residue_match = 0;
 	for(size_t j=0; j<all_sub_chains.size(); j++){
@@ -620,7 +575,6 @@ vector<SubChainStruct> find_best_chain_to_specific_ref(	vector<SubChainStruct>& 
 	vector<SubChainStruct> merged_sub_chains;
 	size_t cur_index = last_index_of_chain_with_max_residue_match; 
 	while(true){
-		//merged_sub_chains.push_front(all_sub_chains[cur_index]);
 		merged_sub_chains.insert(merged_sub_chains.begin(),all_sub_chains[cur_index]);
 		if(cur_index == last_index_in_longest_chain[cur_index]){
 			break;
@@ -628,18 +582,15 @@ vector<SubChainStruct> find_best_chain_to_specific_ref(	vector<SubChainStruct>& 
 		cur_index = last_index_in_longest_chain[cur_index];
 	}
 	return merged_sub_chains;
-	//std::cout << "merged_sub_chains.size(): " << merged_sub_chains.size() << std::endl;
 }
 void merge_sub_chains(	vector<SubChainStruct>& merged_sub_chains,
 			vector<SubChainStruct>& all_sub_chains, 
 			MapSingleReadParameters &params){
 	/* This must be dynamic programming later! */
-	//vector<vector<SubChainStruct>> merged_sub_chains;
 	size_t last_read_pos = 0;
 	size_t last_mi_bf_pos = 0;
 	std::vector<size_t> last_index_in_longest_chain(all_sub_chains.size());
 	std::vector<size_t> total_residue_match_in_longest_chain(all_sub_chains.size());
-	//std::cout << "here 10" << std::endl;
 	for (int i = 0; i < all_sub_chains.size(); i++) {
 		for (int j = i; j >= 0; j--) {
 			unsigned unsaturation_bonus = (all_sub_chains[i].total_unsaturated_hits * 20); 
@@ -653,26 +604,15 @@ void merge_sub_chains(	vector<SubChainStruct>& merged_sub_chains,
 
 				diff<size_t>(all_sub_chains[i].ref_relative_pos,all_sub_chains[j].ref_relative_pos) < params.allowed_indel_inter_sub_chain_merge + (2 * params.bucket_size)
 				&& total_residue_match_in_longest_chain[i] < total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus){
-					//std::cout << "here boii \n" << "subchain i: " << all_sub_chains[i].to_string() << "\nsubchain j: " << all_sub_chains[j].to_string() << std::endl;
 					if(!all_sub_chains[i].reverse_strand ? 
 						all_sub_chains[j].read_pos_vec.back() <= all_sub_chains[i].read_pos_vec[0] //forward
 						: all_sub_chains[j].read_pos_vec[0] >= all_sub_chains[i].read_pos_vec.back()){ //reverse
-						//std::cout << "here girll \n";
 						last_index_in_longest_chain[i] = j;
 						total_residue_match_in_longest_chain[i] = total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus;
 				}
-			} 
-			/*else{
-				std::cout << "\n\n--------------------\n\n";
-				std::cout << "subchain i: " << all_sub_chains[i].to_string() << "\nsubchain j: " << all_sub_chains[j].to_string() << std::endl;
-				std::cout << bool(diff<size_t>(all_sub_chains[i].ref_relative_pos,all_sub_chains[j].ref_relative_pos) < params.allowed_indel_inter_sub_chain_merge + (2 * params.bucket_size)) << std::endl;
-				std::cout << bool(total_residue_match_in_longest_chain[i] < total_residue_match_in_longest_chain[j] + all_sub_chains[i].read_pos_vec.size() + unsaturation_bonus) << std::endl;
-				std::cout << "\n\n--------------------\n\n";
 			}
-			*/
 		}
 	}
-	//std::cout << "here 11" << std::endl;
 	size_t max_residue_match_in_chains = 0;
 	size_t last_index_of_chain_with_max_residue_match = 0;
 	for(size_t j=0; j<all_sub_chains.size(); j++){
@@ -680,19 +620,15 @@ void merge_sub_chains(	vector<SubChainStruct>& merged_sub_chains,
 			max_residue_match_in_chains = total_residue_match_in_longest_chain[j];
 			last_index_of_chain_with_max_residue_match = j;
 		}
-		//std::cout << "j: " << j << " " << total_residue_match_in_longest_chain[j] << " " << last_index_in_longest_chain[j] << std::endl;
 	}
-	//std::cout << "max_residue_match_in_chains " << max_residue_match_in_chains << std::endl;
 	size_t cur_index = last_index_of_chain_with_max_residue_match; 
 	while(true){
-		//merged_sub_chains.push_front(all_sub_chains[cur_index]);
 		merged_sub_chains.insert(merged_sub_chains.begin(),all_sub_chains[cur_index]);
 		if(cur_index == last_index_in_longest_chain[cur_index]){
 			break;
 		}
 		cur_index = last_index_in_longest_chain[cur_index];
 	}
-	//std::cout << "merged_sub_chains.size(): " << merged_sub_chains.size() << std::endl;
 }
 template<typename H>
 bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID>& mi_bf, 
@@ -712,7 +648,6 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	size_t filter_counter = 0;
 
 	vector<HitStruct> all_hits;
-	//all_hits.reserve(10000);
 
 	do{
 		if(mi_bf.at_rank(itr1.hashes(),m_rank_pos_1)){ // a bit-vector hit
@@ -721,9 +656,7 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 			for(size_t m = 0; m < mi_bf.get_hash_num(); m++){
 				
 				reverse_strand = bool(!((m_data_1[m] & mi_bf.ANTI_MASK) > mi_bf.STRAND) == itr1.forward(m));
-				//std::cout << "reverse_strand: " << reverse_strand << " itr1.forward(): " << itr1.forward() << std::endl;
 				saturated= bool(!(m_data_1[m] > mi_bf.MASK));
-				//std::cout << "m_data_1[m] & FULL_ANTI_MASK: " << (m_data_1[m] & FULL_ANTI_MASK) << std::endl;
 				all_hits.push_back(
 					HitStruct(
 						m_data_1[m] & FULL_ANTI_MASK,
@@ -732,7 +665,6 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 						saturated
 					)
 				);
-				//std::cout << "\nitr.get_pos(): " << (itr1.get_pos() ) << " m_data_1[m] & FULL_ANTI_MASK: " << (m_data_1[m] & FULL_ANTI_MASK)* params.bucket_size << std::flush; 
 			}
 
 		}
@@ -790,17 +722,18 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 	extend_best_chain(best_chain,params,all_all_hits);
 	bool after_extend = best_chain.size() > 1 || best_chain[0].read_pos_vec.size() > 30;
 
-	//if(before_extend != after_extend){
-	//	std::cout << "before_extend: " << before_extend << std::endl;
-	//}
-	//std::cout << "here 1" << std::endl;
 #pragma omp critical 
 {
 	if((best_chain.size() > 1 || best_chain[0].read_pos_vec.size() > 30)){
 		print_best_chain_as_paf(record,best_chain,params);
 	}
 }
-	return true;
+	if(!params.verbose){
+		return true;
+	}
+	
+
+
 	size_t true_ref_id = 999;
 	for (auto const& x : params.name_map)
 	{
@@ -808,22 +741,18 @@ bool map_single_read(btllib::SeqReader::Record &record, btllib::MIBloomFilter<ID
 			true_ref_id = x.first;
 		}
 	}
-	//std::cout << "true_ref_id: " << true_ref_id << std::endl;
 	
 	vector<SubChainStruct> true_chain = find_best_chain_to_specific_ref(
 				sub_chains,true_ref_id,params
 			);
-	//std::cout << "best_ref_id: " << best_chain[0].ref_id << std::endl;
 	std::cout << "\n\nBest Chain Props:" << std::endl;
 	print_chain_properties(best_chain,params);
 	print_hits_to_chains(best_chain,all_all_hits,params);
 	std::cout << "\n\nTrue Chain Props:" << std::endl;
 	print_chain_properties(true_chain,params);
 	print_hits_to_chains(true_chain,all_all_hits,params);
-	if(params.verbose){
-		std::cout << "read name: " << record.id << std::endl;
-		//std::cout << "real ref id: " << best_chain[0].ref_id << std::endl;
-	}
+	
+	std::cout << "read name: " << record.id << std::endl;
 	std::cout << "-----\n\n\n------" << std::flush;
 
 	return true;
