@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
 	printf("GIT COMMIT HASH: %s \n", STRINGIZE_VALUE_OF(GITCOMMIT));
 	bool die = false;
 
+
 	//switch statement variable
 	int c;
 
@@ -135,7 +136,7 @@ int main(int argc, char *argv[]) {
 			NULL, 0, NULL, 0 } };
 
 	//actual checking step
-	std::cout << "here 10" << std::endl;
+	std::cout << "here 11" << std::endl;
 	int option_index = 0;
 	while ((c = getopt_long(argc, argv, "p:ht:b:S:g:k:e:a:m:n:Fv",
 			long_options, &option_index)) != -1) {
