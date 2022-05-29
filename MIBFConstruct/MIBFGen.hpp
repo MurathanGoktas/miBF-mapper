@@ -338,6 +338,10 @@ public:
 					<< std::endl;
 			}
 		}
+		std::cout << "Total found: " << miBFCS.total_found << std::endl;
+		std::cout << "Total replaced: " << miBFCS.total_replaced << std::endl;
+		std::cout << "Total saturated: " << miBFCS.total_saturated << std::endl;
+
 
 		cerr << "Outputting IDs file: " << filePrefix + "_ids.txt" << endl;
 		std::ofstream idFile;
