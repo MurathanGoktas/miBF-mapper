@@ -30,13 +30,15 @@ def read_paf_file(rows, paf_path):
 
 def parse_query_name(query_name):
     splitted = query_name.split("_")
+    '''
     while(len(splitted) > 7): ## if the read has _ (bottom dash) in its name
         splitted[0] = splitted[0] + splitted[1]
         del splitted[1]
     if(len(splitted[0].split("-")) > 0):
         splitted[0] = '_'.join(splitted[0].split("-")[1:])
+    '''
     splitted[1] = splitted[1].split(";")[0]
-    #print(splitted)
+    print(splitted)
     return splitted
 
 
