@@ -164,7 +164,6 @@ public:
 		auto end = std::chrono::system_clock::now();
 		std::chrono::duration<double> elapsed_seconds = end-start;
 		std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-		std::cout << "here" << std::endl;
 		
 		std::cout << "bitvector generation -- finished computation at " << std::ctime(&end_time)
 			<< "elapsed time: " << elapsed_seconds.count() << "s"
@@ -243,7 +242,6 @@ public:
 					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
-						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
 					} else if (l < 0){
 						break;
@@ -313,8 +311,6 @@ public:
 					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
-						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
 						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
 					} else if (l < 0){
 						break;
