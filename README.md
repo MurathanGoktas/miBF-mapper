@@ -7,16 +7,22 @@ Submodules:
 Dependent subdirectory:
   * Common
 
-Dependetnt software:
-  * pypaf module
-  * LINKS
-
 After cloning directly from the repository run:
 ```bash
 ./autogen.sh
 ```
 Compiling BioBloomTools should be as easy as:
 ```bash
-./configure && make && make install
+./configure && make
+```
+
+To build miBF
+```bash
+MIBFConstruct/biobloommimaker draft.fa
+```
+
+To map miBF
+```bash
+MIBFAnalyze/mibfanalyzzereads -m /path/mibfdraft.bf -r reads.fa 
 ```
 Author: Murathan Goktas
