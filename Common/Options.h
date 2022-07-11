@@ -8,7 +8,7 @@
 
 enum FilterType {BLOOMFILTER, BLOOMMAP};
 
-typedef uint32_t ID;
+typedef uint64_t ID;
 
 /**
  * Global variables that are mostly constant for the duration of the
@@ -44,6 +44,7 @@ namespace opt {
 	extern std::string prefix;
 	extern unsigned kmerSize;
 	extern unsigned stepSize;
+	extern unsigned bucketSize;
 	extern unsigned minSize;
 	extern unsigned hashNum;
 	extern unsigned numEle;

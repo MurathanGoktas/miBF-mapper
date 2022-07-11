@@ -1,7 +1,6 @@
 SUBDIRS = \
 	Common \
 	MIBFConstruct \
-	MIBFPair \
 	MIBFAnalyze
 
 dist_doc_DATA = \

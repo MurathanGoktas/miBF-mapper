@@ -14,12 +14,15 @@
 #include <string>
 #include <stdint.h>
 
-#include "btl_bloomfilter/MIBloomFilter.hpp"
-#include "btl_bloomfilter/MIBFConstructSupport.hpp"
-#include "btl_bloomfilter/vendor/stHashIterator.hpp"
-#include "Common/sntHashIterator.hpp"
+//#include "btl_bloomfilter/MIBloomFilter.hpp"
+//#include "btl_bloomfilter/MIBFConstructSupport.hpp"
+#include "btllib/nthash.hpp"
+#include "btllib/mi_bloom_filter_construct_support.hpp"
+#include "Utilities/mi_bf_nthash.hpp"
+//#include "btl_bloomfilter/vendor/stHashIterator.hpp"
+//#include "Common/sntHashIterator.hpp"
 
-#include "btl_bloomfilter/BloomFilter.hpp"
+//#include "btl_bloomfilter/BloomFilter.hpp"
 
 #include "Common/Options.h"
 
@@ -28,6 +31,9 @@
 #include <google/sparse_hash_map>
 #include <google/dense_hash_set>
 #include <sdsl/int_vector.hpp>
+
+#include <chrono>
+#include <ctime>
 
 #include <zlib.h>
 #include <stdio.h>
@@ -50,6 +56,7 @@ public:
 		//dense hash maps take POD, and strings need to live somewhere
 		m_nameToID.set_empty_key(m_ids[0]);
 		size_t counts = 0;
+		auto start = std::chrono::system_clock::now();
 		if (opt::idByFile) {
 			for (unsigned i = 0; i < m_fileNames.size(); ++i) {
 				m_ids.push_back(m_fileNames[i].substr(
@@ -117,11 +124,18 @@ public:
 				gzclose(fp);
 			}
 		}
+		auto end = std::chrono::system_clock::now();
+		std::chrono::duration<double> elapsed_seconds = end-start;
+		std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+		
+		std::cout << "Read genomes - finished computation at " << std::ctime(&end_time)
+			<< "elapsed time: " << elapsed_seconds.count() << "s"
+			<< std::endl;
 
 		//make saturation bit is not exceeded
-		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 1)));
+		assert(m_ids.size() < ID(ID(1) << (sizeof(ID) * 8 - 1))); // multiplying with CHARBIT could be even better instead of 8
 		//make strand bit is not exceeded
-		assert(m_ids.size() < ID(1 << (sizeof(ID) * 8 - 2)));
+		assert(m_ids.size() < ID(ID(1) << (sizeof(ID) * 8 - 2))); // multiplying with CHARBIT could be even better instead of 8
 
 		//estimate number of k-mers
 		if (m_expectedEntries == 0) {
@@ -143,22 +157,33 @@ public:
 				opt::hashNum, occ, opt::sseeds);
 		vector<vector<unsigned> > ssVal;
 		if (!opt::sseeds.empty()) {
-			ssVal =	MIBloomFilter<ID>::parseSeedString(opt::sseeds);
+			ssVal =	btllib::parse_seeds(opt::sseeds);
 		}
+
+		auto start = std::chrono::system_clock::now();
 		generateBV(miBFCS, ssVal);
+		auto end = std::chrono::system_clock::now();
+		std::chrono::duration<double> elapsed_seconds = end-start;
+		std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+		std::cout << "here" << std::endl;
+		
+		std::cout << "bitvector generation -- finished computation at " << std::ctime(&end_time)
+			<< "elapsed time: " << elapsed_seconds.count() << "s"
+			<< std::endl;
 
 		if (opt::verbose){
 			cerr << "Finishing initial Bit vector construction " <<  omp_get_wtime() - time << "s" << endl;
 			time = omp_get_wtime();
 			cerr << "Populating values of miBF" << endl;
 		}
-		MIBloomFilter<ID> *miBF = miBFCS.getEmptyMIBF();
+		btllib::MIBloomFilter<ID> *miBF = miBFCS.get_empty_mi_bf();
 
 		//record memory before
 		size_t memKB = getRSS();
 		if (opt::verbose)
 			cerr << "Mem usage (kB): " << memKB << endl;
 
+		
 		if (opt::idByFile) {
 #pragma omp parallel for schedule(dynamic)
 			for (unsigned i = 0; i < m_fileNames.size(); ++i) {
@@ -179,12 +204,9 @@ public:
 						name = m_fileNames[i].substr(
 								m_fileNames[i].find_last_of("/") + 1);
 					}
-					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
-						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
-						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name] - 1]);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name] - 1], opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
@@ -224,7 +246,7 @@ public:
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]], opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
@@ -238,27 +260,38 @@ public:
 				fp = gzopen(m_fileNames[i].c_str(), "r");
 				kseq_t *seq = kseq_init(fp);
 				int l;
+				start = std::chrono::system_clock::now();
 #pragma omp parallel private(l)
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					l = kseq_read(seq);
-					if (l >= 0 && seq->seq.l >= opt::minSize) {
-						sequence = string(seq->seq.s, seq->seq.l);
-						name = string(seq->name.s, seq->name.l);
+					{
+						l = kseq_read(seq);
+						if (l >= 0 && seq->seq.l >= opt::minSize) {
+							sequence = string(seq->seq.s, seq->seq.l);
+							name = string(seq->name.s, seq->name.l);
+						}
 					}
+
 					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertMIBF(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "first it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertMIBF(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_mi_bf(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
 				}
 				kseq_destroy(seq);
 				gzclose(fp);
+				end = std::chrono::system_clock::now();
+				elapsed_seconds = end-start;
+				end_time = std::chrono::system_clock::to_time_t(end);
+				
+				std::cout << "mibf insertion -- finished computation at " << std::ctime(&end_time)
+					<< "elapsed time: " << elapsed_seconds.count() << "s"
+					<< std::endl;
 			}
 			//apply saturation
 			if(opt::verbose){
@@ -271,28 +304,37 @@ public:
 				fp = gzopen(m_fileNames[i].c_str(), "r");
 				kseq_t *seq = kseq_init(fp);
 				int l;
+				start = std::chrono::system_clock::now();
 #pragma omp parallel private(l)
 				for (;;) {
 					string sequence, name;
 #pragma omp critical(seq)
-					
-					l = kseq_read(seq);
-					if (l >= 0 && seq->seq.l >= opt::minSize) {
-						sequence = string(seq->seq.s, seq->seq.l);
-						name = string(seq->name.s, seq->name.l);
+					{
+						l = kseq_read(seq);
+						if (l >= 0 && seq->seq.l >= opt::minSize) {
+							sequence = string(seq->seq.s, seq->seq.l);
+							name = string(seq->name.s, seq->name.l);
+						}
 					}
 					
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						H itr = hashIterator<H>(sequence, ssVal);
 						//miBFCS.insertSaturation(*miBF, itr, m_nameToID[name], m_start_pos[m_nameToID[name]]);
 						//std::cout << "sat it mpos: " <<  m_start_pos[m_nameToID[name]] << std::endl;
-						miBFCS.insertSaturation(*miBF, itr, m_start_pos[m_nameToID[name]]);
+						miBFCS.insert_saturation(*miBF, itr, m_start_pos[m_nameToID[name]] / opt::bucketSize, opt::bucketSize);
 					} else if (l < 0){
 						break;
 					}
 				}
 				kseq_destroy(seq);
 				gzclose(fp);
+				end = std::chrono::system_clock::now();
+				elapsed_seconds = end-start;
+				end_time = std::chrono::system_clock::to_time_t(end);
+				
+				std::cout << "mibf saturation -- finished computation at " << std::ctime(&end_time)
+					<< "elapsed time: " << elapsed_seconds.count() << "s"
+					<< std::endl;
 			}
 		}
 
@@ -314,10 +356,10 @@ public:
 		assert(posFile);
 		//---------------
 
-		cerr << "PopCount: " << miBF->getPop() << endl;
-		cerr << "PopSaturated: " << miBF->getPopSaturated() << endl;
+		cerr << "PopCount: " << miBF->get_pop() << endl;
+		cerr << "PopSaturated: " << miBF->get_pop_saturated() << endl;
 		cerr << "PopCount Ratio: "
-				<< double(miBF->getPop()) / double(miBF->size()) << endl;
+				<< double(miBF->get_pop()) / double(miBF->size()) << endl;
 		cerr << "Storing filter" << endl;
 
 		//save filter
@@ -325,7 +367,7 @@ public:
 
 		if(opt::verbose > 1){
 			vector<size_t> counts(m_ids.size(), 0);
-			miBF->getIDCounts(counts);
+			miBF->get_id_counts(counts);
 			size_t count = 0;
 			for(vector<size_t>::iterator itr = ++counts.begin(); itr != counts.end(); ++itr){
 				cout << ++count << "\t" << *itr << endl;
@@ -352,7 +394,7 @@ private:
 	void generateBV(MIBFConstructSupport<ID, H> &miBFCS,
 			const vector<vector<unsigned>> &ssVal) {
 		if (opt::verbose > 0)
-			cerr << "Bit vector Size: " << miBFCS.getFilterSize() << endl;
+			cerr << "Bit vector Size: " << miBFCS.get_filter_size() << endl;
 
 		size_t uniqueCounts = 0;
 		if (opt::verbose > 0)
@@ -383,7 +425,7 @@ private:
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
-							colliCounts += miBFCS.insertBVColli(itr);
+							colliCounts += miBFCS.insert_bv_colli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
 					} else if (l < 0){
@@ -424,7 +466,7 @@ private:
 					if (l >= 0 && seq->seq.l >= opt::minSize) {
 						if (sequence.length() >= m_kmerSize) {
 							H itr = hashIterator<H>(sequence, ssVal);
-							colliCounts += miBFCS.insertBVColli(itr);
+							colliCounts += miBFCS.insert_bv_colli(itr);
 							totalCount += sequence.length() - m_kmerSize + 1;
 						}
 					} else if (l < 0){
@@ -441,13 +483,13 @@ private:
 			cerr << "Approximate number of unique frames in filter: "
 					<< uniqueCounts << endl;
 		}
-	}
 
+	}
 
 	template<typename H>
 	H hashIterator(const string &seq,
 			const vector<vector<unsigned> > &seedVal) {
-		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize, opt::stepSize);
+		return H(seq, seedVal, opt::hashNum, 1, m_kmerSize);
 	}
 
 	inline void writeIDs(std::ofstream &file) const {

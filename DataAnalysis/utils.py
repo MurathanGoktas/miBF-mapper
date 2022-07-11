@@ -58,6 +58,9 @@ class IDRepGraphDrawer:
         subplt.plot(index_array,unsat_rep_array, label='unsaturated')
         subplt.plot(index_array,sat_rep_array, label='saturated')
 
+        x1,x2,y1,y2 = subplt.axis()  
+        subplt.axis((x1,x2,y1,6)) ## 6 should be hash number
+
         target_contig_name = str(self.mibf_id_df.loc[self.mibf_id_df['contig_mibf_id'] == target_contig_mibf_id]['query_name'].values[0])
         
         subplt.set_title(
@@ -131,8 +134,7 @@ class IDRepGraphDrawer:
     ## 	interval_end : end position of the region to be analyzed
     def get_subplot_title(self,target_contig_name,target_contig_mibf_id,window_size,interval_start,interval_end):
         return str(
-            "MIBF id:" + str(target_contig_mibf_id) + 
-            " real ID:" + str(target_contig_name) +
+            "ID:" + str(target_contig_name) +
             " start:" + str(interval_start) + 
             " length:" + str(interval_end - interval_start)
         )
