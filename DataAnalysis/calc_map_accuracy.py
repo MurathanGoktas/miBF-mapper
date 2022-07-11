@@ -66,6 +66,7 @@ def flag_suppl_alignments(sorted_paf_df):
 def overlap(min1, max1, min2, max2):
     start = max(min1, min2)
     end = min(max1, max2)
+
     d = end - start
     if d < 0:
         return 0

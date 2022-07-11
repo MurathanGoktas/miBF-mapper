@@ -100,7 +100,7 @@ struct MappedRegion{
 	bool operator<(const MappedRegion &region2) const
 	{
 		return contig_id == region2.contig_id ?
-			first_read_pos < region2.first_read_pos
+			first_contig_pos < region2.first_contig_pos
 			: contig_id < region2.contig_id;
 	}
 };
