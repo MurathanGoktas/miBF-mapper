@@ -25,4 +25,3 @@ To map miBF
 ```bash
 MIBFAnalyze/mibfanalyzzereads -m /path/mibfdraft.bf -r reads.fa 
 ```
-Author: Murathan Goktas
